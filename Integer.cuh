@@ -47,10 +47,12 @@
 
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
+#include <thrust/reverse.h>
 
 using longest_type = uintmax_t;
 
-#include "primes_3_000_000.h"
+//#include "primes_3_000_000.h"
+#include "primes_100.h"
 
 #define BLOCK_SIZE 1024
 
@@ -268,7 +270,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     n /= shift;
                 }
 
-                std::reverse(std::begin(bits_), std::end(bits_));
+                thrust::reverse(std::begin(bits_), std::end(bits_));
             }
 
             adjust();
