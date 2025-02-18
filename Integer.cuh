@@ -32,14 +32,6 @@
 #include <format>
 #endif
 
-#ifdef WITH_GMP
-#include <gmpxx.h>
-#endif
-
-#ifdef WITH_BOOST
-#include <boost/multiprecision/cpp_int.hpp>
-#endif
-
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <curand.h>
@@ -53,8 +45,7 @@
 
 using longest_type = uintmax_t;
 
-//#include "primes_3_000_000.h"
-#include "primes_100.h"
+#include "primes_3_000_000.h"
 
 #define BLOCK_SIZE 1024
 
@@ -99,25 +90,7 @@ __global__ void Integer_setRandom(unsigned long long* a, size_t n, size_t seed)
 
 template <typename T, class Vector, typename Enable = void>
 class Integer;
-/**
-template <typename T>
-__global__ void Integer_previousPrime(T const* numberData, size_t numberDataSize,
-                                      size_t size, bool* divisible)
-{
-    size_t start{blockIdx.x * blockDim.x + threadIdx.x + 1};
 
-
-}
-    
-template <typename T>
-__global__ void Integer_nextPrime(T const* numberData, size_t numberDataSize,
-                                  size_t size, bool* divisible)
-{
-    size_t start{blockIdx.x * blockDim.x + threadIdx.x + 1};
-
-
-}
-**/
 template <typename T>
 __global__ void Integer_isPrime_trialDivision(unsigned int const* primes, size_t primesSize,
                                               T const* numberData, size_t numberDataSize,
@@ -326,34 +299,6 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         {
             adjust();
         }
-
-#ifdef WITH_GMP
-        CONSTEXPR Integer(mpz_class const& n) : Integer(n.get_str(2), 2)
-        {
-        }
-        
-        CONSTEXPR Integer(mpz_t const n)
-        {
-            char* s{nullptr};
-            
-            gmp_asprintf(&s, "%Zd", n);
-            
-            *this = Integer(s, 10);
-            
-            free(s);
-        }
-#endif
-
-#ifdef WITH_BOOST
-        CONSTEXPR Integer(boost::multiprecision::cpp_int const& n)
-        {
-            std::ostringstream oss;
-            
-            oss << n;
-            
-            *this = Integer(oss.str(), 10);
-        }
-#endif
 
         CONSTEXPR Integer(char const* n, size_t base = 0) : Integer(std::string{n}, base)
         {
