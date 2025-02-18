@@ -778,11 +778,11 @@ namespace cu
         b = tmp;
     }
 
-    template <class It>
+    template<class ForwardIt1, class ForwardIt2>
     __device__ __host__ constexpr //< since C++20
-    void iter_swap(It a, It b)
+    void iter_swap(ForwardIt1 a, ForwardIt2 b)
     {
-        cu::swap(a, b);
+        cu::swap(*a, *b);
     }
 
     template <class BidirIt>
