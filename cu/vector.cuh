@@ -479,7 +479,7 @@ namespace cu
             }
 
             template <class InputIt>
-            __device__ vector(InputIt first, InputIt last) : size_(cu::distance<InputIt>(first, last))
+            __device__ vector(InputIt first, InputIt last) : size_(cu::distance(first, last))
             {
                 while (first != last)
                 {
@@ -621,11 +621,11 @@ namespace cu
             template <class InputIt>
             __device__ void insert(const_iterator pos, InputIt first, InputIt last)
             {
-                resize(size_ + cu::distance<InputIt>(first, last));
+                resize(size_ + cu::distance(first, last));
 
                 size_t i{size_ - 1};
 
-                for (size_t j{0}; j < cu::distance<InputIt>(first, last); ++j)
+                for (size_t j{0}; j < cu::distance(first, last); ++j)
                     this->operator[](j) = this->operator[](j - 1);
 
                 i = cu::distance(cbegin(), pos);
@@ -778,9 +778,9 @@ namespace cu
         b = tmp;
     }
 
-    template <typename T>
+    template <class It>
     __device__ __host__ constexpr //< since C++20
-    void iter_swap(typename vector<T>::iterator a, typename vector<T>::iterator b)
+    void iter_swap(It a, It b)
     {
         cu::swap(a, b);
     }
@@ -799,11 +799,11 @@ namespace cu
                 return;
     
             for (--last; first < last; (void)++first, --last)
-                std::iter_swap<BidirIt>(first, last);
+                cu::iter_swap<BidirIt>(first, last);
         }
         else
             while (first != last && first != --last)
-                std::iter_swap<BidirIt>(first++, last);
+                cu::iter_swap<BidirIt>(first++, last);
     }
 }
 
