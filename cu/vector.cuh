@@ -1,5 +1,5 @@
-#ifndef CU_VECTOR_H
-#define CU_VECTOR_H
+#ifndef CU_VECTOR_CUH
+#define CU_VECTOR_CUH
 
 #include <cassert>
 #include <compare>
@@ -807,4 +807,4 @@ namespace cu
     }
 }
 
-#endif // CU_VECTOR_H
+#endif // CU_VECTOR_CUH
