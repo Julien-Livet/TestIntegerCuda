@@ -27,9 +27,7 @@ int main()
     {
         Z n;
         n.setPrecision(1024 / 64);
-        std::cout << "hey0" << std::endl;
         n.setRandom<std::random_device>();
-        std::cout << "hey1" << std::endl;
         n.setPositive();
         if (!(n % 2))
             ++n;
