@@ -49,6 +49,8 @@
 #include <thrust/host_vector.h>
 #include <thrust/reverse.h>
 
+#include "cu/vector.cuh"
+
 using longest_type = uintmax_t;
 
 //#include "primes_3_000_000.h"
@@ -108,10 +110,10 @@ __global__ void Integer_isPrime_trialDivision(unsigned int const* primes, size_t
 
     if (idx < primesSize && !divisible)
     {
-        Integer<T, thrust::device_vector<T> > const n(numberData,
-                                                      numberData + numberDataSize);
-        Integer<T, thrust::device_vector<T> > const s(sqrtLimitData,
-                                                      sqrtLimitData + numberDataSize);
+        Integer<T, cu::vector<T> > const n(numberData,
+                                           numberData + numberDataSize);
+        Integer<T, cu::vector<T> > const s(sqrtLimitData,
+                                           sqrtLimitData + numberDataSize);
             
         if (primes[idx] <= s && !(n % primes[idx]))
             *divisible = true;
@@ -119,6 +121,7 @@ __global__ void Integer_isPrime_trialDivision(unsigned int const* primes, size_t
 }
 
 template <typename T, class Vector>
+__device__ __host__
 Integer<T, Vector> reduction(Integer<T, Vector> const& t, Integer<T, Vector> const& R,
                              Integer<T, Vector> const& n, Integer<T, Vector> const& n_)
 {
@@ -139,6 +142,7 @@ Integer<T, Vector> reduction(Integer<T, Vector> const& t, Integer<T, Vector> con
 }
 
 template <typename T, class Vector>
+__device__ __host__
 Integer<T, Vector> redmulmod(Integer<T, Vector> const& a, Integer<T, Vector> b,
                              Integer<T, Vector> const& n, Integer<T, Vector> const& R,
                              Integer<T, Vector> const& n_, Integer<T, Vector> const& R2modn)
@@ -151,6 +155,7 @@ Integer<T, Vector> redmulmod(Integer<T, Vector> const& a, Integer<T, Vector> b,
 }
 
 template <typename T, class Vector>
+__device__ __host__
 bool mulmod(Integer<T, Vector> const& a, Integer<T, Vector> b, Integer<T, Vector> const& m)
 {
     Integer<T, Vector> x(0);
@@ -175,6 +180,7 @@ bool mulmod(Integer<T, Vector> const& a, Integer<T, Vector> b, Integer<T, Vector
 }
 
 template <typename T, class Vector>
+__device__ __host__
 Integer<T, Vector> modulo(Integer<T, Vector> const& base, Integer<T, Vector> e,
                           Integer<T, Vector> const& m, Integer<T, Vector> const& R,
                           Integer<T, Vector> const& m_, Integer<T, Vector> const& R2modm)
@@ -218,19 +224,19 @@ __global__ void Integer_isPrime_millerRabin(T const* numberData, size_t numberDa
 
     if (idx < size && !divisible)
     {
-        Integer<T, thrust::device_vector<T> > const number(numberData, numberData + numberDataSize);
-        auto const n(number +1);
+        Integer<T, cu::vector<T> > const number(numberData, numberData + numberDataSize);
+        auto const n(number + 1);
         auto a(n);
         a.template setRandom<std::random_device>();
         a.setPositive();
         a %= number;
         ++a;
 
-        Integer<T, thrust::device_vector<T> > const R(RData, RData + RDataSize);
-        Integer<T, thrust::device_vector<T> > const m_(m_Data, m_Data + m_DataSize);
-        Integer<T, thrust::device_vector<T> > const R2modm(R2modmData, R2modmData + R2modmDataSize);
+        Integer<T, cu::vector<T> > const R(RData, RData + RDataSize);
+        Integer<T, cu::vector<T> > const m_(m_Data, m_Data + m_DataSize);
+        Integer<T, cu::vector<T> > const R2modm(R2modmData, R2modmData + R2modmDataSize);
 
-        Integer<T, thrust::device_vector<T> > temp(sData, sData + sDataSize);
+        Integer<T, cu::vector<T> > temp(sData, sData + sDataSize);
         auto mod{modulo(a, temp, n, R, m_, R2modm)};
 
         while (temp != number && !mod && mod != number)
@@ -270,13 +276,13 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     n /= shift;
                 }
 
-                thrust::reverse(std::begin(bits_), std::end(bits_));
+                cu::distance(cu::begin(bits_), cu::end(bits_));
             }
 
             adjust();
         }
 
-        CONSTEXPR Integer(std::vector<T> const& bits, bool isPositive = true) : isPositive_{isPositive}, bits_{bits}
+        CONSTEXPR Integer(Vector const& bits, bool isPositive = true) : isPositive_{isPositive}, bits_{bits}
         {
             adjust();
         }
@@ -298,7 +304,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         }
 
         template <class InputIt>
-        CONSTEXPR Integer(InputIt begin, InputIt end, bool isPositive = true) : isPositive_{isPositive}, bits_{begin, end}
+        __device__ __host__ CONSTEXPR Integer(InputIt begin, InputIt end, bool isPositive = true) : isPositive_{isPositive}, bits_{begin, end}
         {
             adjust();
         }
@@ -520,7 +526,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         template <typename S>
         CONSTEXPR Integer(Integer<S, Vector> const& other)
         {
-            bits_ = std::vector<T>(other.dataSize() / sizeof(T) + (other.dataSize() % sizeof(T) ? 1 : 0), 0);
+            bits_ = Vector(other.dataSize() / sizeof(T) + (other.dataSize() % sizeof(T) ? 1 : 0), 0);
             std::copy(other.data(), other.data() + other.dataSize(), reinterpret_cast<char*>(bits_.begin()) + bits_.size() * sizeof(T) - other.dataSize());
         }
 
@@ -678,22 +684,22 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                             ++n2;
                         size_t const n{std::max(n1, n2)};
                         size_t const m{n / 2};
-                        std::vector<T> bits(m, T{0});
+                        Vector bits(m, T{0});
                         std::copy(bits_.rbegin(),
                                   bits_.rbegin() + std::min(bits_.size(), m),
                                   bits.rbegin());
                         Integer const x0(bits);
-                        bits = std::vector<T>(m, T{0});
+                        bits = Vector(m, T{0});
                         std::copy(bits_.rbegin() + m,
                                   bits_.rbegin() + std::min(bits_.size(), 2 * m),
                                   bits.rbegin());
                         Integer const x1(bits);
-                        bits = std::vector<T>(m, T{0});
+                        bits = Vector(m, T{0});
                         std::copy(other.bits_.rbegin(),
                                   other.bits_.rbegin() + std::min(other.bits_.size(), m),
                                   bits.rbegin());
                         Integer const y0(bits);
-                        bits = std::vector<T>(m, T{0});
+                        bits = Vector(m, T{0});
                         std::copy(other.bits_.rbegin() + m,
                                   other.bits_.rbegin() + std::min(other.bits_.size(), 2 * m),
                                   bits.rbegin());
@@ -728,10 +734,10 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                         assert(n1_ == n2_);
 #endif
                         *this = z0;
-                        bits = std::vector<T>(z1.size() + m, T{0});
+                        bits = Vector(z1.size() + m, T{0});
                         std::copy(z1.bits_.rbegin(), z1.bits_.rend(), bits.rbegin() + m);
                         *this += Integer(bits);
-                        bits = std::vector<T>(z2.size() + 2 * m, T{0});
+                        bits = Vector(z2.size() + 2 * m, T{0});
                         std::copy(z2.bits_.rbegin(), z2.bits_.rend(), bits.rbegin() + 2 * m);
                         *this += Integer(bits);
                     }
@@ -783,7 +789,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     auto const& a(bits_);
                     auto const& b(other.bits_);
                     size_t const n{std::max(a.size(), b.size())};
-                    std::vector<T> result;
+                    Vector result;
                     result.reserve(n);
 
                     for (size_t i{0}; i < n; ++i)
@@ -800,7 +806,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     if (carry)
                         result.push_back(T{1});
 
-                    std::reverse(std::begin(result), std::end(result));
+                    cu::distance(cu::begin(result), cu::end(result));
 
                     bits_ = result;
                 }
@@ -830,7 +836,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     auto const& a(bits_);
                     auto const& b(otherBits);
                     size_t const n{std::max(a.size(), b.size())};
-                    std::vector<T> result;
+                    Vector result;
                     result.reserve(n);
 
                     for (size_t i{n - 1}; i <= n - 1; --i)
@@ -949,7 +955,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             return *this;
         }
 
-        CONSTEXPR Integer& operator%=(Integer const& other)
+        __device__ __host__ CONSTEXPR Integer& operator%=(Integer const& other)
         {
             auto const lhs(*this);
             auto const rhs(other);
@@ -977,6 +983,25 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     {
                         auto const qr{computeQrBurnikelZiegler(*this, other)};
 
+                        if (!(*this == qr.first * rhs + qr.second))
+                        {
+                            printf("*this  ");
+                            for (auto const& b : bits_)
+                                printf("%lu ", b);
+                            printf("\n");
+                            printf("qr.first  ");
+                            for (auto const& b : qr.first.bits_)
+                                printf("%lu ", b);
+                            printf("\n");
+                            printf("rhs  ");
+                            for (auto const& b : rhs.bits_)
+                                printf("%lu ", b);
+                            printf("\n");
+                            printf("qr.second  ");
+                            for (auto const& b : qr.second.bits_)
+                                printf("%lu ", b);
+                            printf("\n");
+                        }
                         assert(*this == qr.first * rhs + qr.second);
 
                         *this = qr.second;
@@ -1018,13 +1043,13 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             auto const s{static_cast<unsigned short>(sizeof(T) * 8)};
             auto const n(other / s);
 
-            std::vector<T> const v(n.template cast<longest_type>(), T{0});
+            Vector const v(n.template cast<longest_type>(), T{0});
 
-            bits_.insert(std::end(bits_), std::begin(v), std::end(v));
+            bits_.insert(cu::end(bits_), cu::cbegin(v), cu::cend(v));
 
             other -= n * s;
 
-            std::vector<T> bits(bits_.size() + 1, T{0});
+            Vector bits(bits_.size() + 1, T{0});
 
             std::copy(bits_.rbegin(), bits_.rend(), bits.rbegin());
 
@@ -1034,7 +1059,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
             if (shift)
             {
-                for (auto it{std::begin(bits_) + 1}; it != std::end(bits_); ++it)
+                for (auto it{cu::begin(bits_) + 1}; it != cu::end(bits_); ++it)
                 {
                     longest_type const s{sizeof(T) * 8};
                     
@@ -1078,7 +1103,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
             if (bits_.size() < n.template cast<longest_type>())
             {
-                bits_ = std::vector<T>{T{0}};
+                bits_ = Vector{T{0}};
 
                 return *this;
             }
@@ -1130,8 +1155,8 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     return false;
             }
 
-            std::vector<T> a(std::max(bits_.size(), other.bits_.size()), T{0});
-            std::vector<T> b(a);
+            Vector a(std::max(bits_.size(), other.bits_.size()), T{0});
+            Vector b(a);
 
             std::copy(bits_.rbegin(), bits_.rend(), a.rbegin());
             std::copy(other.bits_.rbegin(), other.bits_.rend(), b.rbegin());
@@ -1165,8 +1190,8 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     return false;
             }
 
-            std::vector<T> a(std::max(bits_.size(), other.bits_.size()), T{0});
-            std::vector<T> b(a);
+            Vector a(std::max(bits_.size(), other.bits_.size()), T{0});
+            Vector b(a);
 
             std::copy(bits_.rbegin(), bits_.rend(), a.rbegin());
             std::copy(other.bits_.rbegin(), other.bits_.rend(), b.rbegin());
@@ -1353,13 +1378,13 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
         CONSTEXPR Integer& operator&=(Integer const& other)
         {
-            std::vector<T> bits(std::max(bits_.size(), other.bits_.size())
+            Vector bits(std::max(bits_.size(), other.bits_.size())
                                   - std::min(bits_.size(), other.bits_.size()), 0);
 
             if (bits_.size() > other.bits_.size())
-                bits.insert(std::end(bits), std::begin(other.bits_), std::end(other.bits_));
+                bits.insert(cu::end(bits), cu::cbegin(other.bits_), cu::cend(other.bits_));
             else
-                bits.insert(std::end(bits), std::begin(bits_), std::end(bits_));
+                bits.insert(cu::end(bits), cu::cbegin(bits_), cu::cend(bits_));
 
             Vector const& otherBits(bits_.size() > other.bits_.size() ? bits_ : other.bits_);
 
@@ -1785,7 +1810,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             if (precision == bits_.size())
                 return;
 
-            std::vector<T> bits(precision, T{0});
+            Vector bits(precision, T{0});
 
             std::copy(bits_.rbegin(), bits_.rbegin() + std::min(bits_.size(), precision), bits.rbegin());
 
@@ -1793,7 +1818,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         }
 
         template <typename URNG>
-        CONSTEXPR void setRandom()
+        __device__ __host__ CONSTEXPR void setRandom()
         {
             isNan_ = false;
             isInfinity_ = false;
@@ -1819,9 +1844,9 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         }
 
         CONSTEXPR int isPrime(size_t reps = 25) const
-        {
+        {std::cout << "ho0" << std::endl;
             assert(reps);
-            
+            std::cout << "ho1" << std::endl;
             if (*this < 2)
                 return 0;
             else if (*this == 2)
@@ -1829,7 +1854,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             else if(!(*this & 1))
                 return 0;
             else if (this->template fits<unsigned int>())
-            {
+            {std::cout << "ho2" << std::endl;
                 auto p{std::equal_range(primes.begin(), primes.end(), this->template cast<unsigned int>())};
 
                 if (p.first != primes.end() && *p.first != this->template cast<unsigned int>())
@@ -1840,38 +1865,38 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             }
             
             //Trial divisions
-
+            std::cout << "ho3" << std::endl;
             auto const sqrtLimit(sqrt(*this));
-
-            {
+            std::cout << "ho4" << std::endl;
+            {std::cout << "hey0" << std::endl;
                 auto const sqrtLimit(sqrt(*this));
-                    
+                std::cout << "hey1" << std::endl;
                 unsigned int* a(nullptr);
                 cudaMalloc(&a, primes.size() * sizeof(unsigned int));
                 cudaMemcpy(a, primes.data(), primes.size() * sizeof(unsigned int), cudaMemcpyHostToDevice);
-
+                std::cout << "hey2" << std::endl;
                 bool* divisible(nullptr);
                 cudaMalloc(&divisible, sizeof(bool));
                 cudaMemset(divisible, 0, sizeof(bool));
-
+                std::cout << "hey3" << std::endl;
                 T* numberData(nullptr);    
                 cudaMalloc(&numberData, sizeof(T) * bits_.size());
                 cudaMemcpy(numberData, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice);
-
+                std::cout << "hey4" << std::endl;
                 T* sqrtLimitData(nullptr);
                 cudaMalloc(&sqrtLimitData, sizeof(T) * sqrtLimit.bits_.size());
                 cudaMemcpy(sqrtLimitData, sqrtLimit.bits_.data(), sizeof(T) * sqrtLimit.bits_.size(), cudaMemcpyHostToDevice);
-
+                std::cout << "hey5" << std::endl;
                 size_t const blockSize{BLOCK_SIZE};
                 size_t const gridSize{(primes.size() + blockSize) / blockSize};
-                
+                std::cout << "hey6" << std::endl;
                 Integer_isPrime_trialDivision<T><<<gridSize, blockSize>>>(a, primes.size(),
                                                                           numberData,   bits_.size(),
                                                                           sqrtLimitData, sqrtLimit.bits_.size(),
                                                                           divisible);
-                
+                std::cout << "hey7" << std::endl;
                 cudaDeviceSynchronize();
-                
+                std::cout << "hey8" << std::endl;
                 cudaFree(a);
                 cudaFree(numberData);
                 cudaFree(sqrtLimitData);
@@ -2034,7 +2059,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
                 if (it == bits_.rend())
                 {
-                    std::vector<T> bits(bits_.size() + 1, T{0});
+                    Vector bits(bits_.size() + 1, T{0});
 
                     std::copy(bits_.rbegin(), bits_.rend(), bits.rbegin());
 
@@ -2062,7 +2087,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         {
             if (bits_.size() < n)
             {
-                std::vector<T> bits(n, T{0});
+                Vector bits(n, T{0});
 
                 std::copy(bits_.rbegin(), bits_.rend(), bits.rbegin());
 
@@ -2110,12 +2135,12 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             if (isNan() || isInfinity())
                 return number;
 
-            auto it{std::begin(bits_)};
+            auto it{cu::begin(bits_)};
 
-            while (!*it && it != std::end(bits_))
+            while (!*it && it != cu::end(bits_))
                 ++it;
 
-            if (it != std::end(bits_))
+            if (it != cu::end(bits_))
             {
                 auto b{*it};
 
@@ -2125,7 +2150,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     b >>= 1;
                 }
 
-                number += (std::distance(it, std::end(bits_)) - 1) * sizeof(T) * 8;
+                number += (cu::distance<typename Vector::const_iterator>(it, cu::end(bits_)) - 1) * sizeof(T) * 8;
             }
 
             return number;
@@ -2315,16 +2340,16 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             if (!bits_.size())
                 return;
 
-            auto it{std::begin(bits_)};
+            auto it{cu::begin(bits_)};
 
-            while (!*it && it != std::end(bits_))
+            while (!*it && it != cu::end(bits_))
                 ++it;
 
-            if (it == std::end(bits_))
-                it = std::end(bits_) - 1;
+            if (it == cu::end(bits_))
+                it = cu::end(bits_) - 1;
 
-            if (it != std::begin(bits_))
-                bits_ = std::vector<T>{it, std::end(bits_)};
+            if (it != cu::begin(bits_))
+                bits_ = Vector{it, cu::end(bits_)};
         }
 
         CONSTEXPR bool isCoprime(Integer const& other) const noexcept
@@ -2491,7 +2516,7 @@ CONSTEXPR inline bool operator!=(S const& lhs, Integer<T, Vector> const& rhs) no
 }
 
 template <typename T, typename S, class Vector>
-CONSTEXPR inline Integer<T, Vector> operator+(Integer<T, Vector> lhs, S const& rhs)
+__device__ __host__ CONSTEXPR inline Integer<T, Vector> operator+(Integer<T, Vector> lhs, S const& rhs)
 {
     return lhs += Integer<T, Vector>(rhs);
 }
@@ -2539,7 +2564,7 @@ CONSTEXPR inline Integer<T, Vector> operator*(S const& lhs, Integer<T, Vector> c
 }
 
 template <typename T, typename S, class Vector>
-CONSTEXPR inline Integer<T, Vector> operator%(Integer<T, Vector> lhs, S const& rhs)
+__device__ __host__ CONSTEXPR inline Integer<T, Vector> operator%(Integer<T, Vector> lhs, S const& rhs)
 {
     return lhs %= Integer<T, Vector>(rhs);
 }
@@ -2575,7 +2600,7 @@ CONSTEXPR inline Integer<T, Vector> operator>>(S const& lhs, Integer<T, Vector> 
 }
 
 template <typename T, typename S, class Vector>
-CONSTEXPR inline Integer<T, Vector> operator&(Integer<T, Vector> lhs, S const& rhs)
+__device__ __host__ CONSTEXPR inline Integer<T, Vector> operator&(Integer<T, Vector> lhs, S const& rhs)
 {
     return lhs &= Integer<T, Vector>(rhs);
 }
@@ -3181,16 +3206,33 @@ CONSTEXPR inline Integer<T, Vector> binomial(S const& n, Integer<T, Vector> cons
 template <typename T, class Vector>
 CONSTEXPR inline Integer<T, Vector> sqrt(Integer<T, Vector> const& n)
 {
+    printf("n  ");
+    for (auto const& b : n.bits())
+        printf("%lu ", b);
+    printf("\n");
+
+    std::cout << "pop0" << std::endl;
     if (n < 0)
         return Integer<T, Vector>::nan();
     else if (!n || n == 1 || n.isNan() || n.isInfinity())
         return n;
-
+        std::cout << "pop1" << std::endl;
     Integer<T, Vector> lo(1), hi(n);
     Integer<T, Vector> res(1);
 
+
+    printf("hi  ");
+    for (auto const& b : hi.bits())
+        printf("%lu ", b);
+    printf("\n");
+
+    std::cout << "pop2" << std::endl;
     while (lo <= hi)
-    {
+    {std::cout << "pop3" << std::endl;
+        //std::cout << "lo hi " << lo << " " << hi << std::endl;
+        std::cout << hi << std::endl;
+        exit(0);
+        std::cout << "pop4" << std::endl;
         auto mid(lo + hi);
         mid >>= 1;
 
@@ -3202,7 +3244,7 @@ CONSTEXPR inline Integer<T, Vector> sqrt(Integer<T, Vector> const& n)
         else
             hi = mid - 1;
     }
-
+    std::cout << "pop5" << std::endl;
     return res;
 }
 
@@ -3673,7 +3715,7 @@ computeQrBurnikelZiegler(Integer<T, Vector> const& dividend,
         q_digits.push_back(q_digit);
     }
 
-    std::reverse(std::begin(q_digits), std::end(q_digits));
+    cu::distance(cu::begin(q_digits), cu::end(q_digits));
 
     q = _digits2int(q_digits, n);
 
