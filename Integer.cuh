@@ -1865,8 +1865,6 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             
             //Trial divisions
             
-            auto const sqrtLimit(sqrt(*this));
-            
             {
                 auto const sqrtLimit(sqrt(*this));
                 
@@ -2149,7 +2147,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     b >>= 1;
                 }
 
-                number += (cu::distance<typename Vector::const_iterator>(it, cu::end(bits_)) - 1) * sizeof(T) * 8;
+                number += (cu::distance(it, cu::end(bits_)) - 1) * sizeof(T) * 8;
             }
 
             return number;
@@ -3226,7 +3224,7 @@ CONSTEXPR inline Integer<T, Vector> sqrt(Integer<T, Vector> const& n)
         else
             hi = mid - 1;
     }
-    
+
     return res;
 }
 
