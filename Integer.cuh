@@ -99,7 +99,25 @@ __global__ void Integer_setRandom(unsigned long long* a, size_t n, size_t seed)
 
 template <typename T, class Vector, typename Enable = void>
 class Integer;
+/**
+template <typename T>
+__global__ void Integer_previousPrime(T const* numberData, size_t numberDataSize,
+                                      size_t size, bool* divisible)
+{
+    size_t start{blockIdx.x * blockDim.x + threadIdx.x + 1};
 
+
+}
+    
+template <typename T>
+__global__ void Integer_nextPrime(T const* numberData, size_t numberDataSize,
+                                  size_t size, bool* divisible)
+{
+    size_t start{blockIdx.x * blockDim.x + threadIdx.x + 1};
+
+
+}
+**/
 template <typename T>
 __global__ void Integer_isPrime_trialDivision(unsigned int const* primes, size_t primesSize,
                                               T const* numberData, size_t numberDataSize,
@@ -276,7 +294,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     n /= shift;
                 }
 
-                cu::distance(cu::begin(bits_), cu::end(bits_));
+                cu::reverse(cu::begin(bits_), cu::end(bits_));
             }
 
             adjust();
@@ -806,7 +824,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     if (carry)
                         result.push_back(T{1});
 
-                    cu::distance(cu::begin(result), cu::end(result));
+                    cu::reverse(cu::begin(result), cu::end(result));
 
                     bits_ = result;
                 }
@@ -983,25 +1001,6 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     {
                         auto const qr{computeQrBurnikelZiegler(*this, other)};
 
-                        if (!(*this == qr.first * rhs + qr.second))
-                        {
-                            printf("*this  ");
-                            for (auto const& b : bits_)
-                                printf("%lu ", b);
-                            printf("\n");
-                            printf("qr.first  ");
-                            for (auto const& b : qr.first.bits_)
-                                printf("%lu ", b);
-                            printf("\n");
-                            printf("rhs  ");
-                            for (auto const& b : rhs.bits_)
-                                printf("%lu ", b);
-                            printf("\n");
-                            printf("qr.second  ");
-                            for (auto const& b : qr.second.bits_)
-                                printf("%lu ", b);
-                            printf("\n");
-                        }
                         assert(*this == qr.first * rhs + qr.second);
 
                         *this = qr.second;
@@ -1045,7 +1044,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
             Vector const v(n.template cast<longest_type>(), T{0});
 
-            bits_.insert(cu::end(bits_), cu::cbegin(v), cu::cend(v));
+            bits_.insert(cu::end(bits_), cu::begin(v), cu::end(v));
 
             other -= n * s;
 
@@ -1382,9 +1381,9 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                                   - std::min(bits_.size(), other.bits_.size()), 0);
 
             if (bits_.size() > other.bits_.size())
-                bits.insert(cu::end(bits), cu::cbegin(other.bits_), cu::cend(other.bits_));
+                bits.insert(cu::end(bits), cu::begin(other.bits_), cu::end(other.bits_));
             else
-                bits.insert(cu::end(bits), cu::cbegin(bits_), cu::cend(bits_));
+                bits.insert(cu::end(bits), cu::begin(bits_), cu::end(bits_));
 
             Vector const& otherBits(bits_.size() > other.bits_.size() ? bits_ : other.bits_);
 
@@ -1844,9 +1843,9 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         }
 
         CONSTEXPR int isPrime(size_t reps = 25) const
-        {std::cout << "ho0" << std::endl;
+        {
             assert(reps);
-            std::cout << "ho1" << std::endl;
+            
             if (*this < 2)
                 return 0;
             else if (*this == 2)
@@ -1854,7 +1853,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             else if(!(*this & 1))
                 return 0;
             else if (this->template fits<unsigned int>())
-            {std::cout << "ho2" << std::endl;
+            {
                 auto p{std::equal_range(primes.begin(), primes.end(), this->template cast<unsigned int>())};
 
                 if (p.first != primes.end() && *p.first != this->template cast<unsigned int>())
@@ -1865,38 +1864,38 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             }
             
             //Trial divisions
-            std::cout << "ho3" << std::endl;
+            
             auto const sqrtLimit(sqrt(*this));
-            std::cout << "ho4" << std::endl;
-            {std::cout << "hey0" << std::endl;
+            
+            {
                 auto const sqrtLimit(sqrt(*this));
-                std::cout << "hey1" << std::endl;
+                
                 unsigned int* a(nullptr);
                 cudaMalloc(&a, primes.size() * sizeof(unsigned int));
                 cudaMemcpy(a, primes.data(), primes.size() * sizeof(unsigned int), cudaMemcpyHostToDevice);
-                std::cout << "hey2" << std::endl;
+                
                 bool* divisible(nullptr);
                 cudaMalloc(&divisible, sizeof(bool));
                 cudaMemset(divisible, 0, sizeof(bool));
-                std::cout << "hey3" << std::endl;
+                
                 T* numberData(nullptr);    
                 cudaMalloc(&numberData, sizeof(T) * bits_.size());
                 cudaMemcpy(numberData, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice);
-                std::cout << "hey4" << std::endl;
+                
                 T* sqrtLimitData(nullptr);
                 cudaMalloc(&sqrtLimitData, sizeof(T) * sqrtLimit.bits_.size());
                 cudaMemcpy(sqrtLimitData, sqrtLimit.bits_.data(), sizeof(T) * sqrtLimit.bits_.size(), cudaMemcpyHostToDevice);
-                std::cout << "hey5" << std::endl;
+                
                 size_t const blockSize{BLOCK_SIZE};
                 size_t const gridSize{(primes.size() + blockSize) / blockSize};
-                std::cout << "hey6" << std::endl;
+                
                 Integer_isPrime_trialDivision<T><<<gridSize, blockSize>>>(a, primes.size(),
                                                                           numberData,   bits_.size(),
                                                                           sqrtLimitData, sqrtLimit.bits_.size(),
                                                                           divisible);
-                std::cout << "hey7" << std::endl;
+                
                 cudaDeviceSynchronize();
-                std::cout << "hey8" << std::endl;
+                
                 cudaFree(a);
                 cudaFree(numberData);
                 cudaFree(sqrtLimitData);
@@ -3206,33 +3205,16 @@ CONSTEXPR inline Integer<T, Vector> binomial(S const& n, Integer<T, Vector> cons
 template <typename T, class Vector>
 CONSTEXPR inline Integer<T, Vector> sqrt(Integer<T, Vector> const& n)
 {
-    printf("n  ");
-    for (auto const& b : n.bits())
-        printf("%lu ", b);
-    printf("\n");
-
-    std::cout << "pop0" << std::endl;
     if (n < 0)
         return Integer<T, Vector>::nan();
     else if (!n || n == 1 || n.isNan() || n.isInfinity())
         return n;
-        std::cout << "pop1" << std::endl;
+
     Integer<T, Vector> lo(1), hi(n);
     Integer<T, Vector> res(1);
 
-
-    printf("hi  ");
-    for (auto const& b : hi.bits())
-        printf("%lu ", b);
-    printf("\n");
-
-    std::cout << "pop2" << std::endl;
     while (lo <= hi)
-    {std::cout << "pop3" << std::endl;
-        //std::cout << "lo hi " << lo << " " << hi << std::endl;
-        std::cout << hi << std::endl;
-        exit(0);
-        std::cout << "pop4" << std::endl;
+    {
         auto mid(lo + hi);
         mid >>= 1;
 
@@ -3244,7 +3226,7 @@ CONSTEXPR inline Integer<T, Vector> sqrt(Integer<T, Vector> const& n)
         else
             hi = mid - 1;
     }
-    std::cout << "pop5" << std::endl;
+    
     return res;
 }
 
@@ -3715,7 +3697,7 @@ computeQrBurnikelZiegler(Integer<T, Vector> const& dividend,
         q_digits.push_back(q_digit);
     }
 
-    cu::distance(cu::begin(q_digits), cu::end(q_digits));
+    cu::reverse(cu::begin(q_digits), cu::end(q_digits));
 
     q = _digits2int(q_digits, n);
 
