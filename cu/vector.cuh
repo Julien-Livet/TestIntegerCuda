@@ -6,68 +6,10 @@
 
 #include <cuda.h>
 
+#include "iterator.cuh"
+
 namespace cu
 {
-    namespace detail
-    {
-        template<class It>
-        __device__ __host__ constexpr // required since C++17
-        typename std::iterator_traits<It>::difference_type 
-            do_distance(It first, It last, std::output_iterator_tag)
-        {
-            typename std::iterator_traits<It>::difference_type result = 0;
-            while (first != last)
-            {
-                ++first;
-                ++result;
-            }
-            return result;
-        }
-    
-        template<class It>
-        __device__ __host__ constexpr // required since C++17
-        typename std::iterator_traits<It>::difference_type 
-            do_distance(It first, It last, std::input_iterator_tag)
-        {
-            typename std::iterator_traits<It>::difference_type result = 0;
-            while (first != last)
-            {
-                ++first;
-                ++result;
-            }
-            return result;
-        }
-    
-        template<class It>
-        __device__ __host__ constexpr // required since C++17
-        typename std::iterator_traits<It>::difference_type 
-            do_distance(It first, It last, std::random_access_iterator_tag)
-        {
-            return last - first;
-        }
-    } // namespace detail
-    
-    template <class It>
-    __device__ __host__ constexpr // since C++17
-    typename std::iterator_traits<It>::difference_type 
-    distance(It first, It last)
-    {
-        return detail::do_distance(first, last,
-                                   typename std::iterator_traits<It>::iterator_category());
-    }
-
-    template<class T>
-    __device__ __host__ const T& min(const T& a, const T& b)
-    {
-        return (b < a) ? b : a;
-    }
-    
-    template<class T>
-    __device__ __host__ const T& max(const T& a, const T& b)
-    {
-        return (b < a) ? b : a;
-    }
-
     template <typename T>
     class vector
     {
@@ -82,82 +24,82 @@ namespace cu
                     using difference_type = std::ptrdiff_t;
                     using value_type = T;
 
-                    __device__ const_iterator(T const* ptr) : ptr_{ptr}
+                    __device__ __host__ const_iterator(T const* ptr) : ptr_{ptr}
                     {
                     }
             
-                    __device__ T const& operator*() const
+                    __device__ __host__ T const& operator*() const
                     {
                         return *ptr_;
                     }
             
-                    __device__ T const* operator->() const
+                    __device__ __host__ T const* operator->() const
                     {
                         return ptr_;
                     }
             
-                    __device__ const_iterator& operator++()
+                    __device__ __host__ const_iterator& operator++()
                     {
                         ++ptr_;
 
                         return *this;
                     }
             
-                    __device__ const_iterator operator++(int)
+                    __device__ __host__ const_iterator operator++(int)
                     {
                         auto temp(*this);
                         ++ptr_;
                         return temp;
                     }
             
-                    __device__ const_iterator& operator--()
+                    __device__ __host__ const_iterator& operator--()
                     {
                         --ptr_;
 
                         return *this;
                     }
             
-                    __device__ const_iterator operator--(int)
+                    __device__ __host__ const_iterator operator--(int)
                     {
                         auto temp(*this);
                         --ptr_;
                         return temp;
                     }
 
-                    __device__ const_iterator& operator+=(size_t i)
+                    __device__ __host__ const_iterator& operator+=(size_t i)
                     {
                         ptr_ += i;
 
                         return *this;
                     }
             
-                    __device__ const_iterator operator+(size_t i) const
+                    __device__ __host__ const_iterator operator+(size_t i) const
                     {
                         auto tmp(*this);
 
                         return tmp += i;
                     }
             
-                    __device__ const_iterator& operator-=(size_t i)
+                    __device__ __host__ const_iterator& operator-=(size_t i)
                     {
                         ptr_ -= i;
 
                         return *this;
                     }
             
-                    __device__ const_iterator operator-(size_t i) const
+                    __device__ __host__ const_iterator operator-(size_t i) const
                     {
                         auto tmp(*this);
 
                         return tmp -= i;
                     }
             
-                    __device__ bool operator!=(const_iterator const& other) const
+                    __device__ __host__ bool operator!=(const_iterator const& other) const
                     {
                         return ptr_ != other.ptr_;
                     }
             
-                    __device__ bool operator==(const_iterator const& other) const
+                    __device__ __host__ bool operator==(const_iterator const& other) const
                     {
                         return !(*this != other);
                     }
@@ -174,97 +116,97 @@ namespace cu
                     using difference_type = std::ptrdiff_t;
                     using value_type = T;
 
-                    __device__ iterator(T* ptr) : ptr_{ptr}
+                    __device__ __host__ iterator(T* ptr) : ptr_{ptr}
                     {
                     }
             
-                    __device__ T& operator*()
-                    {
-                        return *ptr_;
-                    }
-            
-                    __device__ T const& operator*() const
+                    __device__ __host__ T& operator*()
                     {
                         return *ptr_;
                     }
             
-                    __device__ T* operator->()
+                    __device__ __host__ T const& operator*() const
+                    {
+                        return *ptr_;
+                    }
+            
+                    __device__ __host__ T* operator->()
                     {
                         return ptr_;
                     }
             
-                    __device__ T const* operator->() const
+                    __device__ __host__ T const* operator->() const
                     {
                         return ptr_;
                     }
             
-                    __device__ iterator& operator++()
+                    __device__ __host__ iterator& operator++()
                     {
                         ++ptr_;
 
                         return *this;
                     }
             
-                    __device__ iterator operator++(int)
+                    __device__ __host__ iterator operator++(int)
                     {
                         auto temp(*this);
                         ++ptr_;
                         return temp;
                     }
             
-                    __device__ iterator& operator--()
+                    __device__ __host__ iterator& operator--()
                     {
                         --ptr_;
 
                         return *this;
                     }
             
-                    __device__ iterator operator--(int)
+                    __device__ __host__ iterator operator--(int)
                     {
                         auto temp(*this);
                         --ptr_;
                         return temp;
                     }
 
-                    __device__ iterator& operator+=(size_t i)
+                    __device__ __host__ iterator& operator+=(size_t i)
                     {
                         ptr_ += i;
 
                         return *this;
                     }
             
-                    __device__ iterator operator+(size_t i) const
+                    __device__ __host__ iterator operator+(size_t i) const
                     {
                         auto tmp(*this);
 
                         return tmp += i;
                     }
             
-                    __device__ iterator& operator-=(size_t i)
+                    __device__ __host__ iterator& operator-=(size_t i)
                     {
                         ptr_ -= i;
 
                         return *this;
                     }
             
-                    __device__ iterator operator-(size_t i) const
+                    __device__ __host__ iterator operator-(size_t i) const
                     {
                         auto tmp(*this);
 
                         return tmp -= i;
                     }
             
-                    __device__ bool operator!=(iterator const& other) const
+                    __device__ __host__ bool operator!=(iterator const& other) const
                     {
                         return ptr_ != other.ptr_;
                     }
             
-                    __device__ bool operator==(iterator const& other) const
+                    __device__ __host__ bool operator==(iterator const& other) const
                     {
                         return !(*this != other);
                     }
                 
-                    __device__ operator const_iterator() const
+                    __device__ __host__ operator const_iterator() const
                     {
                         return const_iterator(ptr_);
                     }
@@ -281,80 +223,80 @@ namespace cu
                     using difference_type = std::ptrdiff_t;
                     using value_type = T;
 
-                    __device__ const_reverse_iterator(T const* ptr) : ptr_{ptr}
+                    __device__ __host__ const_reverse_iterator(T const* ptr) : ptr_{ptr}
                     {
                     }
             
-                    __device__ T const& operator*() const
+                    __device__ __host__ T const& operator*() const
                     {
                         return *ptr_;
                     }
             
-                    __device__ T const* operator->() const
+                    __device__ __host__ T const* operator->() const
                     {
                         return ptr_;
                     }
             
-                    __device__ const_reverse_iterator& operator--()
+                    __device__ __host__ const_reverse_iterator& operator--()
                     {
                         ++ptr_;
                         return *this;
                     }
             
-                    __device__ const_reverse_iterator operator--(int)
+                    __device__ __host__ const_reverse_iterator operator--(int)
                     {
                         auto temp(*this);
                         ++ptr_;
                         return temp;
                     }
             
-                    __device__ const_reverse_iterator& operator++()
+                    __device__ __host__ const_reverse_iterator& operator++()
                     {
                         --ptr_;
                         return *this;
                     }
             
-                    __device__ const_reverse_iterator operator++(int)
+                    __device__ __host__ const_reverse_iterator operator++(int)
                     {
                         auto temp(*this);
                         --ptr_;
                         return temp;
                     }
             
-                    __device__ const_reverse_iterator& operator+=(size_t i)
+                    __device__ __host__ const_reverse_iterator& operator+=(size_t i)
                     {
                         ptr_ -= i;
 
                         return *this;
                     }
             
-                    __device__ const_reverse_iterator operator+(size_t i) const
+                    __device__ __host__ const_reverse_iterator operator+(size_t i) const
                     {
                         auto tmp(*this);
 
                         return tmp -= i;
                     }
             
-                    __device__ const_reverse_iterator& operator-=(size_t i)
+                    __device__ __host__ const_reverse_iterator& operator-=(size_t i)
                     {
                         ptr_ += i;
 
                         return *this;
                     }
             
-                    __device__ const_reverse_iterator operator-(size_t i) const
+                    __device__ __host__ const_reverse_iterator operator-(size_t i) const
                     {
                         auto tmp(*this);
 
                         return tmp += i;
                     }
             
-                    __device__ bool operator!=(const_reverse_iterator const& other) const
+                    __device__ __host__ bool operator!=(const_reverse_iterator const& other) const
                     {
                         return ptr_ != other.ptr_;
                     }
             
-                    __device__ bool operator==(const_reverse_iterator const& other) const
+                    __device__ __host__ bool operator==(const_reverse_iterator const& other) const
                     {
                         return !(*this != other);
                     }
@@ -371,95 +313,95 @@ namespace cu
                     using difference_type = std::ptrdiff_t;
                     using value_type = T;
 
-                    __device__ reverse_iterator(T* ptr) : ptr_{ptr}
+                    __device__ __host__ reverse_iterator(T* ptr) : ptr_{ptr}
                     {
                     }
             
-                    __device__ T& operator*()
-                    {
-                        return *ptr_;
-                    }
-            
-                    __device__ T const& operator*() const
+                    __device__ __host__ T& operator*()
                     {
                         return *ptr_;
                     }
             
-                    __device__ T* operator->()
+                    __device__ __host__ T const& operator*() const
+                    {
+                        return *ptr_;
+                    }
+            
+                    __device__ __host__ T* operator->()
                     {
                         return ptr_;
                     }
             
-                    __device__ T const* operator->() const
+                    __device__ __host__ T const* operator->() const
                     {
                         return ptr_;
                     }
             
-                    __device__ reverse_iterator& operator--()
+                    __device__ __host__ reverse_iterator& operator--()
                     {
                         ++ptr_;
                         return *this;
                     }
             
-                    __device__ reverse_iterator operator--(int)
+                    __device__ __host__ reverse_iterator operator--(int)
                     {
                         auto temp(*this);
                         ++ptr_;
                         return temp;
                     }
             
-                    __device__ reverse_iterator& operator++()
+                    __device__ __host__ reverse_iterator& operator++()
                     {
                         --ptr_;
                         return *this;
                     }
             
-                    __device__ reverse_iterator operator++(int)
+                    __device__ __host__ reverse_iterator operator++(int)
                     {
                         auto temp(*this);
                         --ptr_;
                         return temp;
                     }
             
-                    __device__ reverse_iterator& operator+=(size_t i)
+                    __device__ __host__ reverse_iterator& operator+=(size_t i)
                     {
                         ptr_ -= i;
 
                         return *this;
                     }
             
-                    __device__ reverse_iterator operator+(size_t i) const
+                    __device__ __host__ reverse_iterator operator+(size_t i) const
                     {
                         auto tmp(*this);
 
                         return tmp -= i;
                     }
             
-                    __device__ reverse_iterator& operator-=(size_t i)
+                    __device__ __host__ reverse_iterator& operator-=(size_t i)
                     {
                         ptr_ += i;
 
                         return *this;
                     }
             
-                    __device__ reverse_iterator operator-(size_t i) const
+                    __device__ __host__ reverse_iterator operator-(size_t i) const
                     {
                         auto tmp(*this);
 
                         return tmp += i;
                     }
             
-                    __device__ bool operator!=(reverse_iterator const& other) const
+                    __device__ __host__ bool operator!=(reverse_iterator const& other) const
                     {
                         return ptr_ != other.ptr_;
                     }
             
-                    __device__ bool operator==(reverse_iterator const& other) const
+                    __device__ __host__ bool operator==(reverse_iterator const& other) const
                     {
                         return !(*this != other);
                     }
 
-                    __device__ operator const_reverse_iterator() const
+                    __device__ __host__ operator const_reverse_iterator() const
                     {
                         return const_reverse_iterator(ptr_);
                     }
@@ -468,18 +410,22 @@ namespace cu
                     T* ptr_;    
             };
 
-            __device__ vector() = default;
+            __device__ __host__ vector() = default;
 
-            __device__ vector(size_t count, T const& value = T()) : size_{count}, capacity_{count}
+            __device__ __host__ vector(size_t count, T const& value = T()) : size_{count}, capacity_{count}
             {
+#ifdef __CUDA_ARCH__
                 cudaMalloc(&data_, sizeof(T) * count);
+#else
+                data_ = new T[count];
+#endif
 
                 for (size_t i{0}; i < size_; ++i)
                     this->operator[](i) = value;
             }
 
             template <class InputIt>
-            __device__ vector(InputIt first, InputIt last)
+            __device__ __host__ vector(InputIt first, InputIt last)
             {
                 resize(cu::distance(first, last));
                 
@@ -490,37 +436,50 @@ namespace cu
                 }
             }
 
-            __device__ vector(vector const& other) : vector(other.begin(), other.end())
+            __device__ __host__ vector(vector const& other) : vector(other.begin(), other.end())
             {
             }
 
-            __device__ ~vector()
+            __device__ __host__ ~vector()
             {
+#ifdef __CUDA_ARCH__
                 cudaFree(data_);
+#else
+                delete[] data_;
+#endif
+
                 data_ = nullptr;
                 size_ = 0;
                 capacity_ = 0;
             }
 
-            __device__ void reserve(size_t capacity)
+            __device__ __host__ void reserve(size_t capacity)
             {
                 if (capacity <= capacity_)
                     return;
 
                 T* d{nullptr};
 
+#ifdef __CUDA_ARCH__
                 cudaMalloc(&d, sizeof(T) * capacity);
 
                 memcpy(d, data_, sizeof(T) * size_);
 
                 cudaFree(data_);
+#else
+                d = new T[capacity];
+
+                std::memcpy(d, data_, sizeof(T) * size_);
+
+                delete[] data_;
+#endif
 
                 capacity_ = capacity;
 
                 data_ = d;
             }
 
-            __device__ void resize(size_t size)
+            __device__ __host__ void resize(size_t size)
             {
                 if (size > capacity_)
                     reserve(size);
@@ -530,31 +489,31 @@ namespace cu
                 size_ = size;
             }
 
-            __device__ size_t capacity() const
+            __device__ __host__ size_t capacity() const
             {
                 return capacity_;
             }
 
-            __device__ size_t size() const
+            __device__ __host__ size_t size() const
             {
                 return size_;
             }
 
-            __device__ T const& operator[](size_t i) const
+            __device__ __host__ T const& operator[](size_t i) const
             {
                 assert(i < size_);
 
                 return data_[i];
             }
 
-            __device__ T& operator[](size_t i)
+            __device__ __host__ T& operator[](size_t i)
             {
                 assert(i < size_);
 
                 return data_[i];
             }
 
-            __device__ T const& at(size_t i) const
+            __device__ __host__ T const& at(size_t i) const
             {
                 if (i >= size_)
                     throw std::out_of_range("");
@@ -562,7 +521,7 @@ namespace cu
                 return data_[i];
             }
 
-            __device__ T& at(size_t i)
+            __device__ __host__ T& at(size_t i)
             {
                 if (i >= size_)
                     throw std::out_of_range("");
@@ -570,49 +529,49 @@ namespace cu
                 return data_[i];
             }
 
-            __device__ T const& front() const
+            __device__ __host__ T const& front() const
             {
                 return this->operator[](0);
             }
 
-            __device__ T const& back() const
+            __device__ __host__ T const& back() const
             {
                 return this->operator[](size_ - 1);
             }
 
-            __device__ T const* data() const
+            __device__ __host__ T const* data() const
             {
                 return data_;
             }
 
-            __device__ T* data()
+            __device__ __host__ T* data()
             {
                 return data_;
             }
 
-            __device__ bool empty() const
+            __device__ __host__ bool empty() const
             {
                 return !size_;
             }
 
-            __device__ void clear()
+            __device__ __host__ void clear()
             {
                 resize(0);
             }
 
-            __device__ void pop_back()
+            __device__ __host__ void pop_back()
             {
                 resize(size_ - 1);
             }
 
-            __device__ void push_back(T const& value)
+            __device__ __host__ void push_back(T const& value)
             {
                 resize(size_ + 1);
 
                 this->operator[](size_ - 1) = value;
             }
 
-            __device__ void insert(const_iterator pos, T const& value)
+            __device__ __host__ void insert(const_iterator pos, T const& value)
             {
                 resize(size_ + 1);
 
@@ -623,7 +582,7 @@ namespace cu
             }
 
             template <class InputIt>
-            __device__ void insert(const_iterator pos, InputIt first, InputIt last)
+            __device__ __host__ void insert(const_iterator pos, InputIt first, InputIt last)
             {
                 resize(size_ + cu::distance(first, last));
 
@@ -642,67 +601,67 @@ namespace cu
                 }
             }
 
-            __device__ iterator begin()
+            __device__ __host__ iterator begin()
             {
                 return iterator(data_);
             }
 
-            __device__ iterator end()
+            __device__ __host__ iterator end()
             {
                 return iterator(data_ + size_);
             }
 
-            __device__ const_iterator begin() const
+            __device__ __host__ const_iterator begin() const
             {
                 return const_iterator(data_);
             }
 
-            __device__ const_iterator end() const
+            __device__ __host__ const_iterator end() const
             {
                 return iterator(data_ + size_);
             }
 
-            __device__ const_iterator cbegin() const
+            __device__ __host__ const_iterator cbegin() const
             {
                 return const_iterator(data_);
             }
 
-            __device__ const_iterator cend() const
+            __device__ __host__ const_iterator cend() const
             {
                 return iterator(data_ + size_);
             }
 
-            __device__ reverse_iterator rbegin()
+            __device__ __host__ reverse_iterator rbegin()
             {
                 return reverse_iterator(data_ + size_ - 1);
             }
             
-            __device__ reverse_iterator rend()
+            __device__ __host__ reverse_iterator rend()
             {
                 return reverse_iterator(data_ - 1);
             }
 
-            __device__ const_reverse_iterator rbegin() const
+            __device__ __host__ const_reverse_iterator rbegin() const
             {
                 return const_reverse_iterator(data_ + size_ - 1);
             }
             
-            __device__ const_reverse_iterator rend() const
+            __device__ __host__ const_reverse_iterator rend() const
             {
                 return const_reverse_iterator(data_ - 1);
             }
 
-            __device__ const_reverse_iterator crbegin() const
+            __device__ __host__ const_reverse_iterator crbegin() const
             {
                 return const_reverse_iterator(data_ + size_ - 1);
             }
             
-            __device__ const_reverse_iterator crend() const
+            __device__ __host__ const_reverse_iterator crend() const
             {
                 return const_reverse_iterator(data_ - 1);
             }
 
-            __device__ auto operator<=>(vector const& other) const
+            __device__ __host__ auto operator<=>(vector const& other) const
             {
                 for (size_t i{0}; i < cu::min(size_, other.size_); ++i)
                 {
@@ -757,7 +716,7 @@ namespace cu
     }
 
     template <class Vector>
-    __device__ auto rbegin(Vector const& v)
+    __device__ __host__ auto rbegin(Vector const& v)
     {
         return v.crbegin();
     }
