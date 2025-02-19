@@ -479,8 +479,10 @@ namespace cu
             }
 
             template <class InputIt>
-            __device__ vector(InputIt first, InputIt last) : size_(cu::distance(first, last))
+            __device__ vector(InputIt first, InputIt last)
             {
+                resize(cu::distance(first, last));
+                
                 while (first != last)
                 {
                     push_back(*first);
@@ -521,6 +523,8 @@ namespace cu
             __device__ void resize(size_t size)
             {
                 if (size > capacity_)
+                    reserve(size);
+                else if (size == capacity_)
                     reserve(2 * size);
 
                 size_ = size;
