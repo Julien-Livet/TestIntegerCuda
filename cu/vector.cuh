@@ -482,9 +482,12 @@ namespace cu
             __device__ __host__ void resize(size_t size)
             {
                 if (size > capacity_)
-                    reserve(size);
-                else if (size == capacity_)
-                    reserve(2 * size);
+                {
+                    if (size <= 2 * capacity_)
+                        reserve(2 * capacity_);
+                    else
+                        reserve(size);
+                }
 
                 size_ = size;
             }
