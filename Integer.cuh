@@ -259,11 +259,11 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     n = -n;
             }
 
-            if (sizeof(T) == sizeof(S))
+            if constexpr (sizeof(T) == sizeof(S))
                 bits_.push_back(n);
             else
             {
-                auto const shift{longest_type(1) << (std::min(sizeof(T), sizeof(S)) * 8)};
+                auto const shift{longest_type{1} << std::min(sizeof(T), sizeof(S)) * 8};
 
                 for (size_t i{0}; i < bits_.capacity(); ++i)
                 {
