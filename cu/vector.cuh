@@ -453,6 +453,14 @@ namespace cu
                 capacity_ = 0;
             }
 
+            __device__ __host__ vector& operator=(vector const& other)
+            {
+                resize(other.size());
+
+                for (size_t i{0}; i < other.size(); ++i)
+                    this->operator[](i) = other[i];
+            }
+
             __device__ __host__ void reserve(size_t capacity)
             {
                 if (capacity <= capacity_)

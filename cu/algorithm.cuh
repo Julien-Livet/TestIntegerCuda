@@ -18,7 +18,7 @@ namespace cu
     template<class T>
     __device__ __host__ const T& max(const T& a, const T& b)
     {
-        return (b < a) ? b : a;
+        return (a < b) ? b : a;
     }
 
     template<class InputIt, class OutputIt>
