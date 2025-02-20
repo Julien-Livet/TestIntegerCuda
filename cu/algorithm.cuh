@@ -9,6 +9,15 @@
 
 namespace cu
 {
+    template<class BidirIt1, class BidirIt2>
+    __device__ __host__ BidirIt2 move_backward(BidirIt1 first, BidirIt1 last, BidirIt2 d_last)
+    {
+        while (first != last)
+            *(--d_last) = std::move(*(--last));
+
+        return d_last;
+    }
+
     template<class T>
     __device__ __host__ const T& min(const T& a, const T& b)
     {
