@@ -101,7 +101,7 @@ namespace cu
             
                     __device__ __host__ bool operator==(const_iterator const& other) const
                     {
-                        return !(*this != other);
+                        return ptr_ == other.ptr_;
                     }
                 
                 private:
@@ -203,7 +203,7 @@ namespace cu
             
                     __device__ __host__ bool operator==(iterator const& other) const
                     {
-                        return !(*this != other);
+                        return ptr_ == other.ptr_;
                     }
                 
                     __device__ __host__ operator const_iterator() const
@@ -298,7 +298,7 @@ namespace cu
             
                     __device__ __host__ bool operator==(const_reverse_iterator const& other) const
                     {
-                        return !(*this != other);
+                        return ptr_ == other.ptr_;
                     }
 
                 private:
@@ -398,7 +398,7 @@ namespace cu
             
                     __device__ __host__ bool operator==(reverse_iterator const& other) const
                     {
-                        return !(*this != other);
+                        return ptr_ == other.ptr_;
                     }
 
                     __device__ __host__ operator const_reverse_iterator() const
@@ -473,13 +473,15 @@ namespace cu
 #ifdef __CUDA_ARCH__
                 cudaMalloc(&d, sizeof(T) * capacity);
 
-                memcpy(d, data_, sizeof(T) * size_);
+                for (size_t i{0}; i < size_; ++i)
+                    d[i] = data_[i];
 
                 cudaFree(data_);
 #else
                 d = new T[capacity];
 
-                std::memcpy(d, data_, sizeof(T) * size_);
+                for (size_t i{0}; i < size_; ++i)
+                    d[i] = data_[i];
 
                 delete[] data_;
 #endif
@@ -584,7 +586,7 @@ namespace cu
                 this->operator[](size_ - 1) = value;
             }
 
-            __device__ __host__ void insert(const_iterator pos, T const& value)
+            __device__ __host__ void insert(iterator pos, T const& value)
             {
                 resize(size_ + 1);
 
@@ -595,23 +597,15 @@ namespace cu
             }
 
             template <class InputIt>
-            __device__ __host__ void insert(const_iterator pos, InputIt first, InputIt last)
+            __device__ __host__ void insert(iterator pos, InputIt first, InputIt last)
             {
-                resize(size_ + cu::distance(first, last));
+                size_t const n{cu::distance(first, last)};
 
-                size_t i{size_ - 1};
+                resize(size_ + n);
 
-                for (size_t j{0}; j < cu::distance(first, last); ++j)
-                    this->operator[](i--) = this->operator[](i - 1);
+                cu::move_backward(pos, end() - n, end());
 
-                i = cu::distance(cbegin(), pos);
-
-                while (first != last)
-                {
-                    this->operator[](i) = *first;
-                    ++i;
-                    ++first;
-                }
+                cu::copy(first, last, pos);
             }
 
             __device__ __host__ iterator begin()
@@ -631,7 +625,7 @@ namespace cu
 
             __device__ __host__ const_iterator end() const
             {
-                return iterator(data_ + size_);
+                return const_iterator(data_ + size_);
             }
 
             __device__ __host__ const_iterator cbegin() const
@@ -641,7 +635,7 @@ namespace cu
 
             __device__ __host__ const_iterator cend() const
             {
-                return iterator(data_ + size_);
+                return const_iterator(data_ + size_);
             }
 
             __device__ __host__ reverse_iterator rbegin()
