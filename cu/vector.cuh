@@ -427,7 +427,8 @@ namespace cu
             template <class InputIt>
             __device__ __host__ vector(InputIt first, InputIt last)
             {
-                resize(cu::distance(first, last));
+                resize(0);
+                reserve(cu::distance(first, last));
                 
                 while (first != last)
                 {
@@ -584,16 +585,6 @@ namespace cu
                 resize(size_ + 1);
 
                 this->operator[](size_ - 1) = value;
-            }
-
-            __device__ __host__ void insert(iterator pos, T const& value)
-            {
-                resize(size_ + 1);
-
-                for (size_t i{size_ - 1}; i > cu::distance(begin(), pos); --i)
-                    this->operator[](i) = this->operator[](i - 1);
-
-                this->operator[](cu::distance(cbegin(), pos)) = value;
             }
 
             template <class InputIt>
