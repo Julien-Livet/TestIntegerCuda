@@ -427,7 +427,6 @@ namespace cu
             template <class InputIt>
             __device__ __host__ vector(InputIt first, InputIt last)
             {
-                resize(0);
                 reserve(cu::distance(first, last));
                 
                 while (first != last)
