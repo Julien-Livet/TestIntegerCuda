@@ -459,6 +459,8 @@ namespace cu
 
                 for (size_t i{0}; i < other.size(); ++i)
                     this->operator[](i) = other[i];
+
+                return *this;
             }
 
             __device__ __host__ void reserve(size_t capacity)
