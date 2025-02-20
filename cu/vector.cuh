@@ -588,7 +588,7 @@ namespace cu
             {
                 resize(size_ + 1);
 
-                for (size_t i{size_ - 1}; i > pos; --i)
+                for (size_t i{size_ - 1}; i > cu::distance(begin(), pos); --i)
                     this->operator[](i) = this->operator[](i - 1);
 
                 this->operator[](cu::distance(cbegin(), pos)) = value;
@@ -602,7 +602,7 @@ namespace cu
                 size_t i{size_ - 1};
 
                 for (size_t j{0}; j < cu::distance(first, last); ++j)
-                    this->operator[](j) = this->operator[](j - 1);
+                    this->operator[](i--) = this->operator[](i - 1);
 
                 i = cu::distance(cbegin(), pos);
 
