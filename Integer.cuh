@@ -87,7 +87,7 @@ __global__ void Integer_setRandom(unsigned long long* a, size_t n, size_t seed)
     }
 }
 
-template <typename T, class Vector, typename Enable = void>
+template <typename T, typename Enable = void>
 class Integer;
 
 template <typename T>
@@ -100,20 +100,20 @@ __global__ void Integer_isPrime_trialDivision(unsigned int const* primes, size_t
 
     if (idx < primesSize && !*divisible)
     {
-        Integer<T, cu::vector<T> > const n(numberData,
-                                           numberData + numberDataSize);
-        Integer<T, cu::vector<T> > const s(sqrtLimitData,
-                                           sqrtLimitData + numberDataSize);
+        Integer<T> const n(numberData,
+                           numberData + numberDataSize);
+        Integer<T> const s(sqrtLimitData,
+                           sqrtLimitData + numberDataSize);
         
         if (primes[idx] <= s && !(n % primes[idx]))
             *divisible = true;
     }
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__
-Integer<T, Vector> reduction(Integer<T, Vector> const& t, Integer<T, Vector> const& R,
-                             Integer<T, Vector> const& n, Integer<T, Vector> const& n_)
+Integer<T> reduction(Integer<T> const& t, Integer<T> const& R,
+                     Integer<T> const& n, Integer<T> const& n_)
 {
     auto m(t);
     m %= R;
@@ -131,11 +131,11 @@ Integer<T, Vector> reduction(Integer<T, Vector> const& t, Integer<T, Vector> con
     return x;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__
-Integer<T, Vector> redmulmod(Integer<T, Vector> const& a, Integer<T, Vector> b,
-                             Integer<T, Vector> const& n, Integer<T, Vector> const& R,
-                             Integer<T, Vector> const& n_, Integer<T, Vector> const& R2modn)
+Integer<T> redmulmod(Integer<T> const& a, Integer<T> b,
+                     Integer<T> const& n, Integer<T> const& R,
+                     Integer<T> const& n_, Integer<T> const& R2modn)
 {
     auto const reda(reduction(a * R2modn, R, n, n_));
     auto const redb(reduction(b * R2modn, R, n, n_));
@@ -144,11 +144,11 @@ Integer<T, Vector> redmulmod(Integer<T, Vector> const& a, Integer<T, Vector> b,
     return reduction(redc, R, n, n_);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__
-bool mulmod(Integer<T, Vector> const& a, Integer<T, Vector> b, Integer<T, Vector> const& m)
+bool mulmod(Integer<T> const& a, Integer<T> b, Integer<T> const& m)
 {
-    Integer<T, Vector> x(0);
+    Integer<T> x(0);
     auto y(a % m);
 
     while (b > 0)
@@ -169,13 +169,13 @@ bool mulmod(Integer<T, Vector> const& a, Integer<T, Vector> b, Integer<T, Vector
     return x;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__
-Integer<T, Vector> modulo(Integer<T, Vector> const& base, Integer<T, Vector> e,
-                          Integer<T, Vector> const& m, Integer<T, Vector> const& R,
-                          Integer<T, Vector> const& m_, Integer<T, Vector> const& R2modm)
+Integer<T> modulo(Integer<T> const& base, Integer<T> e,
+                  Integer<T> const& m, Integer<T> const& R,
+                  Integer<T> const& m_, Integer<T> const& R2modm)
 {
-    Integer<T, Vector> x(1);
+    Integer<T> x(1);
     auto y(base);
 
     while (e > 0)
@@ -214,7 +214,7 @@ __global__ void Integer_isPrime_millerRabin(T const* numberData, size_t numberDa
 
     if (idx < size && !divisible)
     {
-        Integer<T, cu::vector<T> > const number(numberData, numberData + numberDataSize);
+        Integer<T> const number(numberData, numberData + numberDataSize);
         auto const n(number + 1);
         auto a(n);
         a.template setRandom<std::random_device>();
@@ -222,11 +222,11 @@ __global__ void Integer_isPrime_millerRabin(T const* numberData, size_t numberDa
         a %= number;
         ++a;
 
-        Integer<T, cu::vector<T> > const R(RData, RData + RDataSize);
-        Integer<T, cu::vector<T> > const m_(m_Data, m_Data + m_DataSize);
-        Integer<T, cu::vector<T> > const R2modm(R2modmData, R2modmData + R2modmDataSize);
+        Integer<T> const R(RData, RData + RDataSize);
+        Integer<T> const m_(m_Data, m_Data + m_DataSize);
+        Integer<T> const R2modm(R2modmData, R2modmData + R2modmDataSize);
 
-        Integer<T, cu::vector<T> > temp(sData, sData + sDataSize);
+        Integer<T> temp(sData, sData + sDataSize);
         auto mod{modulo(a, temp, n, R, m_, R2modm)};
 
         while (temp != number && !mod && mod != number)
@@ -240,8 +240,8 @@ __global__ void Integer_isPrime_millerRabin(T const* numberData, size_t numberDa
     }
 }
 
-template <typename T, class Vector>
-class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && std::is_same<T, typename Vector::value_type>::value >::type>
+template <typename T>
+class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_same<T, typename cu::vector<T>::value_type>::value >::type>
 {
     public:
         __device__ __host__ CONSTEXPR Integer() = default;
@@ -249,8 +249,8 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         template <typename S, std::enable_if_t<std::is_standard_layout_v<S> && std::is_trivial_v<S> >* = nullptr>
         __device__ __host__ CONSTEXPR Integer(S n)
         {
-            bits_.reserve(std::max(longest_type{1}, longest_type{sizeof(S) / sizeof(T)}));
-
+            bits_.reserve(cu::max(longest_type{1}, longest_type{sizeof(S) / sizeof(T)}));
+            
             if constexpr (std::is_signed<S>::value)
             {
                 isPositive_ = (n >= 0);
@@ -258,22 +258,22 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                 if (n < 0)
                     n = -n;
             }
-
+            
             if constexpr (sizeof(T) == sizeof(S))
                 bits_.push_back(n);
             else
             {
-                auto const shift{longest_type{1} << std::min(sizeof(T), sizeof(S)) * 8};
-
+                auto const shift{longest_type{1} << cu::min(sizeof(T), sizeof(S)) * 8};
+                
                 for (size_t i{0}; i < bits_.capacity(); ++i)
                 {
                     bits_.push_back(n % shift);
                     n /= shift;
                 }
-
+                
                 cu::reverse(cu::begin(bits_), cu::end(bits_));
             }
-
+            
             adjust();
         }
 
@@ -312,15 +312,15 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         {
             n.erase(std::remove_if(n.begin(), n.end(), isspace), n.end());
             n.erase(std::remove(n.begin(), n.end(), '\''), n.end());
-
+            
             auto it{n.begin()};
-
+            
             if (*it == '-')
             {
                 isPositive_ = false;
                 ++it;
             }
-
+            
             if (!base)
             {
                 auto s{std::string{it, n.end()}.substr(0, 2)};
@@ -336,13 +336,13 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                 else
                     base = 10;
             }
-
+            
             assert(2 <= base && base <= 62);
 
             std::string str{it, n.end()};
             std::transform(str.begin(), str.end(), str.begin(),
                            [] (unsigned char c) { return std::tolower(c); });
-
+                           
             if (str == "nan")
                 setNan();
             else if (str == "inf")
@@ -398,7 +398,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                 {
                     auto otherIt{n.rbegin()};
                     Integer p(1);
-
+                    
                     while (otherIt.base() != it)
                     {
                         if ('0' <= *otherIt && *otherIt <= static_cast<char>('0' + base))
@@ -491,7 +491,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         }
 
         template <typename S>
-        __host__ CONSTEXPR Integer(Integer<S, Vector> const& other)
+        __host__ CONSTEXPR Integer(Integer<S> const& other)
         {
             bits_ = cu::vector<T>(other.dataSize() / sizeof(T) + (other.dataSize() % sizeof(T) ? 1 : 0), 0);
             cu::copy(other.data(), other.data() + other.dataSize(), reinterpret_cast<char*>(bits_.begin()) + bits_.size() * sizeof(T) - other.dataSize());
@@ -584,7 +584,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                             };
 
                             //Karatsuba algorithm
-                            size_t n{std::max(number(a), number(b))};
+                            size_t n{cu::max(number(a), number(b))};
                             if (n % 2)
                                 ++n;
                             size_t const m{n / 2};
@@ -633,26 +633,26 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                             ++n2;
                         if (n2 % 2)
                             ++n2;
-                        size_t const n{std::max(n1, n2)};
+                        size_t const n{cu::max(n1, n2)};
                         size_t const m{n / 2};
                         cu::vector<T> bits(m, T{0});
                         cu::copy(bits_.rbegin(),
-                                  bits_.rbegin() + std::min(bits_.size(), m),
+                                  bits_.rbegin() + cu::min(bits_.size(), m),
                                   bits.rbegin());
                         Integer const x0(bits);
                         bits = cu::vector<T>(m, T{0});
                         cu::copy(bits_.rbegin() + m,
-                                  bits_.rbegin() + std::min(bits_.size(), 2 * m),
+                                  bits_.rbegin() + cu::min(bits_.size(), 2 * m),
                                   bits.rbegin());
                         Integer const x1(bits);
                         bits = cu::vector<T>(m, T{0});
                         cu::copy(other.bits_.rbegin(),
-                                  other.bits_.rbegin() + std::min(other.bits_.size(), m),
+                                  other.bits_.rbegin() + cu::min(other.bits_.size(), m),
                                   bits.rbegin());
                         Integer const y0(bits);
                         bits = cu::vector<T>(m, T{0});
                         cu::copy(other.bits_.rbegin() + m,
-                                  other.bits_.rbegin() + std::min(other.bits_.size(), 2 * m),
+                                  other.bits_.rbegin() + cu::min(other.bits_.size(), 2 * m),
                                   bits.rbegin());
                         Integer const y1(bits);
 
@@ -717,7 +717,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     T carry{0};
                     auto const& a(bits_);
                     auto const& b(other.bits_);
-                    size_t const n{std::max(a.size(), b.size())};
+                    size_t const n{cu::max(a.size(), b.size())};
                     cu::vector<T> result;
                     result.reserve(n);
 
@@ -764,7 +764,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
                     auto const& a(bits_);
                     auto const& b(otherBits);
-                    size_t const n{std::max(a.size(), b.size())};
+                    size_t const n{cu::max(a.size(), b.size())};
                     cu::vector<T> result;
                     result.reserve(n);
 
@@ -996,7 +996,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
             if (bits_.size() < n.template cast<longest_type>())
             {
-                bits_ = cu::vector<T>{T{0}};
+                bits_.clear();
 
                 return *this;
             }
@@ -1048,7 +1048,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     return false;
             }
 
-            cu::vector<T> a(std::max(bits_.size(), other.bits_.size()), T{0});
+            cu::vector<T> a(cu::max(bits_.size(), other.bits_.size()), T{0});
             cu::vector<T> b(a);
 
             cu::copy(bits_.rbegin(), bits_.rend(), a.rbegin());
@@ -1083,7 +1083,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                     return false;
             }
 
-            cu::vector<T> a(std::max(bits_.size(), other.bits_.size()), T{0});
+            cu::vector<T> a(cu::max(bits_.size(), other.bits_.size()), T{0});
             cu::vector<T> b(a);
 
             cu::copy(bits_.rbegin(), bits_.rend(), a.rbegin());
@@ -1130,7 +1130,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             auto it1{bits_.rbegin()};
             auto it2{other.bits_.rbegin()};
 
-            for (size_t i{0}; i < std::min(bits_.size(), other.bits_.size()); ++i)
+            for (size_t i{0}; i < cu::min(bits_.size(), other.bits_.size()); ++i)
             {
                 if (*it1 != *it2)
                     return false;
@@ -1271,8 +1271,8 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
         __device__ __host__ CONSTEXPR Integer& operator&=(Integer const& other)
         {
-            cu::vector<T> bits(std::max(bits_.size(), other.bits_.size())
-                                  - std::min(bits_.size(), other.bits_.size()), 0);
+            cu::vector<T> bits(cu::max(bits_.size(), other.bits_.size())
+                                  - cu::min(bits_.size(), other.bits_.size()), 0);
 
             if (bits_.size() > other.bits_.size())
                 bits.insert(cu::end(bits), cu::begin(other.bits_), cu::end(other.bits_));
@@ -1281,7 +1281,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
             cu::vector<T> const& otherBits(bits_.size() > other.bits_.size() ? bits_ : other.bits_);
 
-            for (size_t i{0}; i < std::min(bits_.size(), other.bits_.size()); ++i)
+            for (size_t i{0}; i < cu::min(bits_.size(), other.bits_.size()); ++i)
                 *(bits.rbegin() + i) &= *(otherBits.rbegin() + i);
 
             bits_ = bits;
@@ -1331,8 +1331,8 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             cu::vector<T> bits(bits_.size() > other.bits_.size() ? bits_ : other.bits_);
             cu::vector<T> const otherBits(bits_.size() > other.bits_.size() ? other.bits_ : bits_);
 
-            for (size_t i{0}; i < std::max(bits.size(), otherBits.size())
-                                        - std::min(bits.size(), otherBits.size()); ++i)
+            for (size_t i{0}; i < cu::max(bits.size(), otherBits.size())
+                                        - cu::min(bits.size(), otherBits.size()); ++i)
                 *(bits.rbegin() + i) ^= 0;
 
             for (size_t i{0}; i < otherBits.size(); ++i)
@@ -1607,7 +1607,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         {
             S n{0};
 
-            size_t const iMax{std::min(std::max(longest_type{1}, longest_type{sizeof(S) / sizeof(T)}), longest_type{bits_.size()})};
+            size_t const iMax{cu::min(cu::max(longest_type{1}, longest_type{sizeof(S) / sizeof(T)}), longest_type{bits_.size()})};
             auto it{bits_.rbegin() + iMax - 1};
 
             for (size_t i{0}; i < iMax; ++i)
@@ -1705,7 +1705,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
             cu::vector<T> bits(precision, T{0});
 
-            cu::copy(bits_.rbegin(), bits_.rbegin() + std::min(bits_.size(), precision), bits.rbegin());
+            cu::copy(bits_.rbegin(), bits_.rbegin() + cu::min(bits_.size(), precision), bits.rbegin());
 
             bits_ = bits;
         }
@@ -1758,12 +1758,14 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             cudaFree(a);
         }
 
-        __device__ CONSTEXPR int isPrime(unsigned int const* primes, size_t primesSize, size_t reps = 25) const
+        __device__ CONSTEXPR int isPrime(unsigned int const* primes, size_t primesSize,
+                                         size_t reps = 25) const
         {
-            
             assert(reps);
             
-            if (*this < 2)
+            if (bits_.empty() || isNan() || isInfinity())
+                return 0;
+            else if (*this < 2)
                 return 0;
             else if (*this == 2)
                 return 2;
@@ -1772,7 +1774,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             else if (this->template fits<unsigned int>())
             {
                 auto p{cu::equal_range(primes, primes + primesSize, this->template cast<unsigned int>())};
-
+                
                 if (p.first != primes + primesSize && *p.first != this->template cast<unsigned int>())
                     --p.first;
                 
@@ -1919,7 +1921,11 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         {
             assert(reps);
             
-            if (*this < 2)
+            (*this < 2);
+            
+            if (bits_.empty() || isNan() || isInfinity())
+                return 0;
+            else if (*this < 2)
                 return 0;
             else if (*this == 2)
                 return 2;
@@ -1928,7 +1934,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             else if (this->template fits<unsigned int>())
             {
                 auto p{std::equal_range(primes.begin(), primes.end(), this->template cast<unsigned int>())};
-
+                
                 if (p.first != primes.end() && *p.first != this->template cast<unsigned int>())
                     --p.first;
                 
@@ -1948,7 +1954,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
             {
                 auto const sqrtLimit(sqrt(*this));
-    
+                
                 std::atomic<bool> divisible(false);
         
                 auto threadFunc
@@ -1982,7 +1988,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
 
                 for (auto& t : threads)
                     t.join();
-
+                
                 if (divisible.load())
                     return 0;
                 
@@ -2208,9 +2214,9 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
             return count;
         }
 
-        __device__ __host__ CONSTEXPR Integer<T, Vector> number() const noexcept
+        __device__ __host__ CONSTEXPR Integer<T> number() const noexcept
         {
-            Integer<T, Vector> number(0);
+            Integer<T> number(0);
 
             if (isNan() || isInfinity())
                 return number;
@@ -2373,8 +2379,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                 ++n;
 
             std::mutex mutex;
-            Integer p;
-            p.setInfinity();
+            Integer p(2 * n);
     
             auto threadFunc
             {
@@ -2430,7 +2435,7 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
                 it = cu::end(bits_) - 1;
             
             if (it != cu::begin(bits_))
-                bits_ = cu::vector<T>{it, cu::end(bits_)};
+                bits_ = cu::vector<T>(it, cu::end(bits_));
         }
 
         __device__ __host__ CONSTEXPR bool isCoprime(Integer const& other) const noexcept
@@ -2465,301 +2470,310 @@ class Integer<T, Vector, typename std::enable_if<std::is_unsigned<T>::value && s
         
         __device__ __host__ CONSTEXPR void setData(char const* data, size_t size) noexcept
         {
-            std::memcpy(bits_.data(), data, std::min(size, dataSize()));
+            std::memcpy(bits_.data(), data, cu::min(size, dataSize()));
         }
 
     private:
         bool isPositive_{true};
         cu::vector<T> bits_;
-        Vector bits__;
         bool isNan_{false};
         bool isInfinity_{false};
         bool autoAdjust_{true};
 };
 
-template <typename T, class Vector>
+using Integerc = Integer<unsigned char>;
+using Integers = Integer<unsigned short>;
+using Integeri = Integer<unsigned int>;
+using Integerl = Integer<unsigned long>;
+using Integerll = Integer<unsigned long long>;
+using Integer8 = Integer<uint8_t>;
+using Integer16 = Integer<uint16_t>;
+using Integer32 = Integer<uint32_t>;
+using Integer64 = Integer<uint64_t>;
+
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator*(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator*(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs *= rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator+(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator+(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs += rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator-(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator-(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs -= rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator/(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator/(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs /= rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator%(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator%(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs %= rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator&(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator&(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs &= rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator|(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator|(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs |= rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator^(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator^(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs ^= rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator<<(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator<<(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs <<= rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator>>(Integer<T, Vector> lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator>>(Integer<T> lhs, Integer<T> const& rhs)
 {
     return lhs >>= rhs;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline bool operator>(Integer<T, Vector> const& lhs, S const& rhs) noexcept
+CONSTEXPR inline bool operator>(Integer<T> const& lhs, S const& rhs) noexcept
 {
-    return lhs.operator>(Integer<T, Vector>(rhs));
+    return lhs.operator>(Integer<T>(rhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline bool operator>(S const& lhs, Integer<T, Vector> const& rhs) noexcept
+CONSTEXPR inline bool operator>(S const& lhs, Integer<T> const& rhs) noexcept
 {
-    return rhs.operator<(Integer<T, Vector>(lhs));
+    return rhs.operator<(Integer<T>(lhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline bool operator>=(Integer<T, Vector> const& lhs, S const& rhs) noexcept
+CONSTEXPR inline bool operator>=(Integer<T> const& lhs, S const& rhs) noexcept
 {
-    return lhs.operator>=(Integer<T, Vector>(rhs));
+    return lhs.operator>=(Integer<T>(rhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline bool operator>=(S const& lhs, Integer<T, Vector> const& rhs) noexcept
+CONSTEXPR inline bool operator>=(S const& lhs, Integer<T> const& rhs) noexcept
 {
-    return rhs.operator<=(Integer<T, Vector>(lhs));
+    return rhs.operator<=(Integer<T>(lhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline bool operator<(Integer<T, Vector> const& lhs, S const& rhs) noexcept
+CONSTEXPR inline bool operator<(Integer<T> const& lhs, S const& rhs) noexcept
 {
-    return lhs.operator<(Integer<T, Vector>(rhs));
+    return lhs.operator<(Integer<T>(rhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline bool operator<(S const& lhs, Integer<T, Vector> const& rhs) noexcept
+CONSTEXPR inline bool operator<(S const& lhs, Integer<T> const& rhs) noexcept
 {
-    return rhs.operator>(Integer<T, Vector>(lhs));
+    return rhs.operator>(Integer<T>(lhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline bool operator<=(Integer<T, Vector> const& lhs, S const& rhs) noexcept
+CONSTEXPR inline bool operator<=(Integer<T> const& lhs, S const& rhs) noexcept
 {
-    return lhs.operator<=(Integer<T, Vector>(rhs));
+    return lhs.operator<=(Integer<T>(rhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__
-CONSTEXPR inline bool operator<=(S const& lhs, Integer<T, Vector> const& rhs) noexcept
+CONSTEXPR inline bool operator<=(S const& lhs, Integer<T> const& rhs) noexcept
 {
-    return rhs.operator>=(Integer<T, Vector>(lhs));
+    return rhs.operator>=(Integer<T>(lhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline bool operator==(S const& lhs, Integer<T, Vector> const& rhs) noexcept
+CONSTEXPR inline bool operator==(S const& lhs, Integer<T> const& rhs) noexcept
 {
-    return rhs.operator==(Integer<T, Vector>(lhs));
+    return rhs.operator==(Integer<T>(lhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline bool operator!=(S const& lhs, Integer<T, Vector> const& rhs) noexcept
+CONSTEXPR inline bool operator!=(S const& lhs, Integer<T> const& rhs) noexcept
 {
-    return rhs.operator!=(Integer<T, Vector>(lhs));
+    return rhs.operator!=(Integer<T>(lhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__
-CONSTEXPR inline Integer<T, Vector> operator+(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator+(Integer<T> lhs, S const& rhs)
 {
-    return lhs += Integer<T, Vector>(rhs);
+    return lhs += Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator+(S const& lhs, Integer<T, Vector> rhs)
+CONSTEXPR inline Integer<T> operator+(S const& lhs, Integer<T> rhs)
 {
-    return rhs += Integer<T, Vector>(lhs);
+    return rhs += Integer<T>(lhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator-(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator-(Integer<T> lhs, S const& rhs)
 {
-    return lhs -= Integer<T, Vector>(rhs);
+    return lhs -= Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator-(S const& lhs, Integer<T, Vector> rhs)
+CONSTEXPR inline Integer<T> operator-(S const& lhs, Integer<T> rhs)
 {
-    return -(rhs -= Integer<T, Vector>(lhs));
+    return -(rhs -= Integer<T>(lhs));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator/(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator/(Integer<T> lhs, S const& rhs)
 {
-    return lhs /= Integer<T, Vector>(rhs);
+    return lhs /= Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator/(S const& lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator/(S const& lhs, Integer<T> const& rhs)
 {
-    return Integer<T, Vector>(lhs) /= rhs;
+    return Integer<T>(lhs) /= rhs;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator*(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator*(Integer<T> lhs, S const& rhs)
 {
-    return lhs *= Integer<T, Vector>(rhs);
+    return lhs *= Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator*(S const& lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator*(S const& lhs, Integer<T> const& rhs)
 {
-    return Integer<T, Vector>(lhs) *= rhs;
+    return Integer<T>(lhs) *= rhs;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__
-CONSTEXPR inline Integer<T, Vector> operator%(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator%(Integer<T> lhs, S const& rhs)
 {
-    return lhs %= Integer<T, Vector>(rhs);
+    return lhs %= Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator%(S const& lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator%(S const& lhs, Integer<T> const& rhs)
 {
-    return Integer<T, Vector>(lhs) %= rhs;
+    return Integer<T>(lhs) %= rhs;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator<<(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator<<(Integer<T> lhs, S const& rhs)
 {
-    return lhs <<= Integer<T, Vector>(rhs);
+    return lhs <<= Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator<<(S const& lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator<<(S const& lhs, Integer<T> const& rhs)
 {
-    return Integer<T, Vector>(lhs) <<= rhs;
+    return Integer<T>(lhs) <<= rhs;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator>>(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator>>(Integer<T> lhs, S const& rhs)
 {
-    return lhs >>= Integer<T, Vector>(rhs);
+    return lhs >>= Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator>>(S const& lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator>>(S const& lhs, Integer<T> const& rhs)
 {
-    return Integer<T, Vector>(lhs) >>= rhs;
+    return Integer<T>(lhs) >>= rhs;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__
-CONSTEXPR inline Integer<T, Vector> operator&(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator&(Integer<T> lhs, S const& rhs)
 {
-    return lhs &= Integer<T, Vector>(rhs);
+    return lhs &= Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator&(S const& lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator&(S const& lhs, Integer<T> const& rhs)
 {
-    return Integer<T, Vector>(lhs) &= rhs;
+    return Integer<T>(lhs) &= rhs;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator|(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator|(Integer<T> lhs, S const& rhs)
 {
-    return lhs |= Integer<T, Vector>(rhs);
+    return lhs |= Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator|(S const& lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator|(S const& lhs, Integer<T> const& rhs)
 {
-    return Integer<T, Vector>(lhs) |= rhs;
+    return Integer<T>(lhs) |= rhs;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator^(Integer<T, Vector> lhs, S const& rhs)
+CONSTEXPR inline Integer<T> operator^(Integer<T> lhs, S const& rhs)
 {
-    return lhs ^= Integer<T, Vector>(rhs);
+    return lhs ^= Integer<T>(rhs);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> operator^(S const& lhs, Integer<T, Vector> const& rhs)
+CONSTEXPR inline Integer<T> operator^(S const& lhs, Integer<T> const& rhs)
 {
-    return Integer<T, Vector>(lhs) ^= rhs;
+    return Integer<T>(lhs) ^= rhs;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __host__ 
-CONSTEXPR inline std::ostream& operator<<(std::ostream& os, Integer<T, Vector> const& n)
+CONSTEXPR inline std::ostream& operator<<(std::ostream& os, Integer<T> const& n)
 {
     bool const showBase(os.flags() & std::ios_base::showbase);
     
@@ -2771,13 +2785,13 @@ CONSTEXPR inline std::ostream& operator<<(std::ostream& os, Integer<T, Vector> c
         return os << n.toString(10, showBase);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> gcd(Integer<T, Vector> const& a, Integer<T, Vector> const& b)
+CONSTEXPR inline Integer<T> gcd(Integer<T> const& a, Integer<T> const& b)
 {
     if (a.isNan() || b.isNan() || a.isInfinity() || b.isInfinity())
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
@@ -2802,64 +2816,64 @@ CONSTEXPR inline Integer<T, Vector> gcd(Integer<T, Vector> const& a, Integer<T, 
         return gcd((a - b) >> 1, b);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> gcd(Integer<T, Vector> const& a, S const& b)
+CONSTEXPR inline Integer<T> gcd(Integer<T> const& a, S const& b)
 {
-    return gcd(a, Integer<T, Vector>(b));
+    return gcd(a, Integer<T>(b));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> gcd(S const& a, Integer<T, Vector> const& b)
+CONSTEXPR inline Integer<T> gcd(S const& a, Integer<T> const& b)
 {
-    return gcd(Integer<T, Vector>(a), b);
+    return gcd(Integer<T>(a), b);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> lcm(Integer<T, Vector> const& a, Integer<T, Vector> const& b)
+CONSTEXPR inline Integer<T> lcm(Integer<T> const& a, Integer<T> const& b)
 {
     return (a * b).abs() / gcd(a, b);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> lcm(Integer<T, Vector> const& a, S const& b)
+CONSTEXPR inline Integer<T> lcm(Integer<T> const& a, S const& b)
 {
-    return lcm(a, Integer<T, Vector>(b));
+    return lcm(a, Integer<T>(b));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> lcm(S const& a, Integer<T, Vector> const& b)
+CONSTEXPR inline Integer<T> lcm(S const& a, Integer<T> const& b)
 {
-    return lcm(Integer<T, Vector>(a), b);
+    return lcm(Integer<T>(a), b);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-gcdExtended(Integer<T, Vector> a, Integer<T, Vector> b,
-            Integer<T, Vector>& u, Integer<T, Vector>& v)
+CONSTEXPR inline Integer<T>
+gcdExtended(Integer<T> a, Integer<T> b,
+            Integer<T>& u, Integer<T>& v)
 {
     if (a.isNan() || b.isNan() || a.isInfinity() || b.isInfinity())
     {
         u.setNan();
         v.setNan();
         
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
     }
     
     if (!a && !b)
-        return Integer<T, Vector>(0);
+        return Integer<T>(0);
 
-    Integer<T, Vector> r1(a), u1(1), v1(0);
-    Integer<T, Vector> r2(b), u2(0), v2(1);
-    Integer<T, Vector> q, r_temp, u_temp, v_temp;
+    Integer<T> r1(a), u1(1), v1(0);
+    Integer<T> r2(b), u2(0), v2(1);
+    Integer<T> q, r_temp, u_temp, v_temp;
 
     while (r2 != 0)
     {
@@ -2882,18 +2896,18 @@ gcdExtended(Integer<T, Vector> a, Integer<T, Vector> b,
     return r1;
 }
 
-template <typename T, typename S1, typename S2, class Vector>
+template <typename T, typename S1, typename S2>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> gcdExtended(S1 const& a, S2 const& b,
-                                                Integer<T, Vector>& u,
-                                                Integer<T, Vector>& v)
+CONSTEXPR inline Integer<T> gcdExtended(S1 const& a, S2 const& b,
+                                                Integer<T>& u,
+                                                Integer<T>& v)
 {
-    return gcdExtended(Integer<T, Vector>(a), Integer<T, Vector>(b), u, v);
+    return gcdExtended(Integer<T>(a), Integer<T>(b), u, v);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> factorial(Integer<T, Vector> const& n)
+CONSTEXPR inline Integer<T> factorial(Integer<T> const& n)
 {
     if (n.isNan() || n.isInfinity())
         return n;
@@ -2901,43 +2915,43 @@ CONSTEXPR inline Integer<T, Vector> factorial(Integer<T, Vector> const& n)
     assert(n >= 0);
 
     if (n == 0)
-        return Integer<T, Vector>(1);
+        return Integer<T>(1);
 
     return n * factorial(n - 1);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> doubleFactorial(Integer<T, Vector> const& n)
+CONSTEXPR inline Integer<T> doubleFactorial(Integer<T> const& n)
 {
     return factorial(factorial(n));
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> multiFactorial(Integer<T, Vector> const& n,
-                                                   Integer<T, Vector> const& m)
+CONSTEXPR inline Integer<T> multiFactorial(Integer<T> const& n,
+                                                   Integer<T> const& m)
 {
     return pow(factorial(n), m);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> multiFactorial(Integer<T, Vector> const& n, S const& m)
+CONSTEXPR inline Integer<T> multiFactorial(Integer<T> const& n, S const& m)
 {
-    return multiFactorial(n, Integer<T, Vector>(m));
+    return multiFactorial(n, Integer<T>(m));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> multiFactorial(S const& n, Integer<T, Vector> const& m)
+CONSTEXPR inline Integer<T> multiFactorial(S const& n, Integer<T> const& m)
 {
-    return multiFactorial(Integer<T, Vector>(n), m);
+    return multiFactorial(Integer<T>(n), m);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> pow(Integer<T, Vector> base, Integer<T, Vector> exp)
+CONSTEXPR inline Integer<T> pow(Integer<T> base, Integer<T> exp)
 {
     assert(exp >= 0);
 
@@ -2955,9 +2969,9 @@ CONSTEXPR inline Integer<T, Vector> pow(Integer<T, Vector> base, Integer<T, Vect
         return n;
     }
     else if (base == 2)
-        return Integer<T, Vector>(1) << exp;
+        return Integer<T>(1) << exp;
 
-    Integer<T, Vector> result(1);
+    Integer<T> result(1);
 
     for (;;)
     {
@@ -2975,29 +2989,29 @@ CONSTEXPR inline Integer<T, Vector> pow(Integer<T, Vector> base, Integer<T, Vect
     return result;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> pow(Integer<T, Vector> const& base, S const& exp)
+CONSTEXPR inline Integer<T> pow(Integer<T> const& base, S const& exp)
 {
-    return pow(base, Integer<T, Vector>(exp));
+    return pow(base, Integer<T>(exp));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> pow(S const& base, Integer<T, Vector> const& exp)
+CONSTEXPR inline Integer<T> pow(S const& base, Integer<T> const& exp)
 {
-    return pow(Integer<T, Vector>(base), exp);
+    return pow(Integer<T>(base), exp);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> powm(Integer<T, Vector> base,
-                                         Integer<T, Vector> exp,
-                                         Integer<T, Vector> const& mod)
+CONSTEXPR inline Integer<T> powm(Integer<T> base,
+                                         Integer<T> exp,
+                                         Integer<T> const& mod)
 {
     assert(exp >= 0);
 
-    Integer<T, Vector> result(1);
+    Integer<T> result(1);
 
     auto base_mod(base % mod);
 
@@ -3018,48 +3032,48 @@ CONSTEXPR inline Integer<T, Vector> powm(Integer<T, Vector> base,
     return result;
 }
 
-template <typename T, typename S, typename U, class Vector>
+template <typename T, typename S, typename U>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> powm(Integer<T, Vector> const& base,
+CONSTEXPR inline Integer<T> powm(Integer<T> const& base,
                                          S const& exp, U const& mod)
 {
-    return powm(base, Integer<T, Vector>(exp), Integer<T, Vector>(mod));
+    return powm(base, Integer<T>(exp), Integer<T>(mod));
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> abs(Integer<T, Vector> const& n)
+CONSTEXPR inline Integer<T> abs(Integer<T> const& n)
 {
     return n.abs();
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-computeQr(Integer<T, Vector> const& dividend, Integer<T, Vector> const& divisor)
+CONSTEXPR inline cu::pair<Integer<T>, Integer<T> >
+computeQr(Integer<T> const& dividend, Integer<T> const& divisor)
 {
     if (!divisor)
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return {n, n};
     }
     else if (!dividend)
-        return {Integer<T, Vector>{0}, Integer<T, Vector>{0}};
+        return {Integer<T>{0}, Integer<T>{0}};
     else if (dividend.isNan())
         return {dividend, dividend};
     else if (divisor.isNan())
         return {divisor, divisor};
     else if (dividend.isInfinity() || divisor.isInfinity())
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return {n, n};
     }
     else if (divisor.abs() > dividend.abs())
-        return {Integer<T, Vector>{0}, dividend};
+        return {Integer<T>{0}, dividend};
     else if (dividend < 0 && divisor < 0)
     {
         auto qr{computeQr(-dividend, -divisor)};
@@ -3101,7 +3115,7 @@ computeQr(Integer<T, Vector> const& dividend, Integer<T, Vector> const& divisor)
         return qr;
     }
 
-    Integer<T, Vector> start(1);
+    Integer<T> start(1);
     auto end(dividend);
 
     while (start <= end)
@@ -3127,53 +3141,53 @@ computeQr(Integer<T, Vector> const& dividend, Integer<T, Vector> const& divisor)
         }
     }
 
-    return {Integer<T, Vector>(0), dividend};
+    return {Integer<T>(0), dividend};
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-computeQr(Integer<T, Vector> const& dividend, S const& divisor)
+CONSTEXPR inline cu::pair<Integer<T>, Integer<T> >
+computeQr(Integer<T> const& dividend, S const& divisor)
 {
-    return computeQr(dividend, Integer<T, Vector>(divisor));
+    return computeQr(dividend, Integer<T>(divisor));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-computeQr(S const& dividend, Integer<T, Vector> const& divisor)
+CONSTEXPR inline cu::pair<Integer<T>, Integer<T> >
+computeQr(S const& dividend, Integer<T> const& divisor)
 {
-    return computeQr(Integer<T, Vector>(dividend), divisor);
+    return computeQr(Integer<T>(dividend), divisor);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-computeQuotient(Integer<T, Vector> const& dividend,
-                Integer<T, Vector> const& divisor)
+CONSTEXPR inline Integer<T>
+computeQuotient(Integer<T> const& dividend,
+                Integer<T> const& divisor)
 {
     if (!divisor)
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
     }
     else if (!dividend)
-        return Integer<T, Vector>{0};
+        return Integer<T>{0};
     else if (dividend.isNan())
         return dividend;
     else if (divisor.isNan())
         return divisor;
     else if (dividend.isInfinity() || divisor.isInfinity())
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
     }
     else if (divisor.abs() > dividend.abs())
-        return Integer<T, Vector>{0};
+        return Integer<T>{0};
     else if (dividend < 0 && divisor < 0)
         return computeQuotient(-dividend, -divisor);
     else if (dividend > 0 && divisor < 0)
@@ -3181,7 +3195,7 @@ computeQuotient(Integer<T, Vector> const& dividend,
     else if (dividend < 0 && divisor > 0)
         return -computeQuotient(-dividend, divisor);
 
-    Integer<T, Vector> start(1);
+    Integer<T> start(1);
     auto end(dividend);
 
     while (start <= end)
@@ -3207,28 +3221,28 @@ computeQuotient(Integer<T, Vector> const& dividend,
         }
     }
 
-    return Integer<T, Vector>(0);
+    return Integer<T>(0);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-computeQuotient(Integer<T, Vector> const& dividend, S const& divisor)
+CONSTEXPR inline Integer<T>
+computeQuotient(Integer<T> const& dividend, S const& divisor)
 {
-    return computeQuotient(dividend, Integer<T, Vector>(divisor));
+    return computeQuotient(dividend, Integer<T>(divisor));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-computeQuotient(S const& dividend, Integer<T, Vector> const& divisor)
+CONSTEXPR inline Integer<T>
+computeQuotient(S const& dividend, Integer<T> const& divisor)
 {
-    return computeQuotient(Integer<T, Vector>(dividend), divisor);
+    return computeQuotient(Integer<T>(dividend), divisor);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> fibonacci(Integer<T, Vector> n)
+CONSTEXPR inline Integer<T> fibonacci(Integer<T> n)
 {
     assert(n >= 0);
 
@@ -3239,9 +3253,9 @@ CONSTEXPR inline Integer<T, Vector> fibonacci(Integer<T, Vector> n)
 
     n -= 1;
 
-    Integer<T, Vector> fn_2(0);
-    Integer<T, Vector> fn_1(1);
-    Integer<T, Vector> fn;
+    Integer<T> fn_2(0);
+    Integer<T> fn_1(1);
+    Integer<T> fn;
 
     while (n)
     {
@@ -3254,12 +3268,12 @@ CONSTEXPR inline Integer<T, Vector> fibonacci(Integer<T, Vector> n)
     return fn;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> primorial(Integer<T, Vector> n)
+CONSTEXPR inline Integer<T> primorial(Integer<T> n)
 {
-    Integer<T, Vector> result(1);
-    Integer<T, Vector> number(2);
+    Integer<T> result(1);
+    Integer<T> number(2);
 
     while (number <= n)
     {
@@ -3270,14 +3284,14 @@ CONSTEXPR inline Integer<T, Vector> primorial(Integer<T, Vector> n)
     return result;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline int jacobi(Integer<T, Vector> const& a, Integer<T, Vector> n)
+CONSTEXPR inline int jacobi(Integer<T> const& a, Integer<T> n)
 {
     assert(n > 0 && n.isOdd());
 
     int result(1);
-    Integer<T, Vector> prime(2);
+    Integer<T> prime(2);
 
     while (n != 1)
     {
@@ -3293,23 +3307,23 @@ CONSTEXPR inline int jacobi(Integer<T, Vector> const& a, Integer<T, Vector> n)
     return result;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline int jacobi(Integer<T, Vector> const& a, S const& n)
+CONSTEXPR inline int jacobi(Integer<T> const& a, S const& n)
 {
-    return jacobi(a, Integer<T, Vector>(n));
+    return jacobi(a, Integer<T>(n));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline int jacobi(S const& a, Integer<T, Vector> const& n)
+CONSTEXPR inline int jacobi(S const& a, Integer<T> const& n)
 {
-    return jacobi(Integer<T, Vector>(a), n);
+    return jacobi(Integer<T>(a), n);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline int legendre(Integer<T, Vector> const& a, Integer<T, Vector> const& p)
+CONSTEXPR inline int legendre(Integer<T> const& a, Integer<T> const& p)
 {
     assert(p.isPrime());
 
@@ -3331,23 +3345,23 @@ CONSTEXPR inline int legendre(Integer<T, Vector> const& a, Integer<T, Vector> co
     }
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> legendre(Integer<T, Vector> const& a, S const& p)
+CONSTEXPR inline Integer<T> legendre(Integer<T> const& a, S const& p)
 {
-    return legendre(a, Integer<T, Vector>(p));
+    return legendre(a, Integer<T>(p));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> legendre(S const& a, Integer<T, Vector> const& p)
+CONSTEXPR inline Integer<T> legendre(S const& a, Integer<T> const& p)
 {
-    return legendre(Integer<T, Vector>(a), p);
+    return legendre(Integer<T>(a), p);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline int kronecker(Integer<T, Vector> const& a, Integer<T, Vector> const& b)
+CONSTEXPR inline int kronecker(Integer<T> const& a, Integer<T> const& b)
 {
     if (a == b)
         return 1;
@@ -3355,51 +3369,51 @@ CONSTEXPR inline int kronecker(Integer<T, Vector> const& a, Integer<T, Vector> c
         return 0;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline int kronecker(Integer<T, Vector> const& a, S const& b)
+CONSTEXPR inline int kronecker(Integer<T> const& a, S const& b)
 {
-    return kronecker(a, Integer<T,Vector>(b));
+    return kronecker(a, Integer<T,cu::vector<T>>(b));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline int kronecker(S const& a, Integer<T, Vector> const& b)
+CONSTEXPR inline int kronecker(S const& a, Integer<T> const& b)
 {
-    return kronecker(Integer<T, Vector>(a), b);
+    return kronecker(Integer<T>(a), b);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> binomial(Integer<T, Vector> const& n,
-                                             Integer<T, Vector> const& k)
+CONSTEXPR inline Integer<T> binomial(Integer<T> const& n,
+                                             Integer<T> const& k)
 {
     assert(n >= 0 && k >= 0);
 
     return factorial(n) / (factorial(k) * factorial(n - k));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> binomial(Integer<T, Vector> const& n, S const& k)
+CONSTEXPR inline Integer<T> binomial(Integer<T> const& n, S const& k)
 {
-    return binomial(n, Integer<T, Vector>(k));
+    return binomial(n, Integer<T>(k));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> binomial(S const& n, Integer<T, Vector> const& k)
+CONSTEXPR inline Integer<T> binomial(S const& n, Integer<T> const& k)
 {
-    return binomial(Integer<T, Vector>(n), k);
+    return binomial(Integer<T>(n), k);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> sqrt(Integer<T, Vector> const& n)
+CONSTEXPR inline Integer<T> sqrt(Integer<T> const& n)
 {
     if (n < 0)
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
@@ -3407,8 +3421,8 @@ CONSTEXPR inline Integer<T, Vector> sqrt(Integer<T, Vector> const& n)
     else if (!n || n == 1 || n.isNan() || n.isInfinity())
         return n;
 
-    Integer<T, Vector> lo(1), hi(n);
-    Integer<T, Vector> res(1);
+    Integer<T> lo(1), hi(n);
+    Integer<T> res(1);
 
     while (lo <= hi)
     {
@@ -3427,16 +3441,16 @@ CONSTEXPR inline Integer<T, Vector> sqrt(Integer<T, Vector> const& n)
     return res;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> root(Integer<T, Vector> const& x,
-                                         Integer<T, Vector> const& n)
+CONSTEXPR inline Integer<T> root(Integer<T> const& x,
+                                         Integer<T> const& n)
 {
     assert(n > 0);
     
     if (x < 0)
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
@@ -3447,14 +3461,14 @@ CONSTEXPR inline Integer<T, Vector> root(Integer<T, Vector> const& x,
         return x;
     else if (n.isNan() || n.isInfinity())
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
     }
 
-    Integer<T, Vector> lo(1), hi(x);
-    Integer<T, Vector> res(1);
+    Integer<T> lo(1), hi(x);
+    Integer<T> res(1);
 
     while (lo <= hi)
     {
@@ -3473,47 +3487,47 @@ CONSTEXPR inline Integer<T, Vector> root(Integer<T, Vector> const& x,
     return res;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> root(S const& x, Integer<T, Vector> const& n)
+CONSTEXPR inline Integer<T> root(S const& x, Integer<T> const& n)
 {
-    return root(Integer<T, Vector>(x), n);
+    return root(Integer<T>(x), n);
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> root(Integer<T, Vector> const& x, S const& n)
+CONSTEXPR inline Integer<T> root(Integer<T> const& x, S const& n)
 {
-    return root(x, Integer<T, Vector>(n));
+    return root(x, Integer<T>(n));
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-computeQuotientBinary(Integer<T, Vector> dividend, Integer<T, Vector> const& divisor)
+CONSTEXPR inline Integer<T>
+computeQuotientBinary(Integer<T> dividend, Integer<T> const& divisor)
 {
     if (!divisor)
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
     }
     else if (!dividend)
-        return Integer<T, Vector>{0};
+        return Integer<T>{0};
     else if (dividend.isNan())
         return dividend;
     else if (divisor.isNan())
         return divisor;
     else if (dividend.isInfinity() || divisor.isInfinity())
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
     }
     else if (divisor.abs() > dividend.abs())
-        return Integer<T, Vector>{0};
+        return Integer<T>{0};
     else if (dividend < 0 && divisor > 0)
         return -computeQuotientBinary(-dividend, divisor);
     else if (dividend > 0 && divisor < 0)
@@ -3521,9 +3535,9 @@ computeQuotientBinary(Integer<T, Vector> dividend, Integer<T, Vector> const& div
     else if (dividend < 0 && divisor < 0)
         return computeQuotientBinary(-dividend, -divisor);
 
-    Integer<T, Vector> quotient(0);
+    Integer<T> quotient(0);
     auto tempDivisor(divisor);
-    Integer<T, Vector> bit(1);
+    Integer<T> bit(1);
 
     while (dividend >= (tempDivisor << 1))
     {
@@ -3546,29 +3560,29 @@ computeQuotientBinary(Integer<T, Vector> dividend, Integer<T, Vector> const& div
     return quotient;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-computeQuotientBinary(Integer<T, Vector> const& dividend, S const& divisor)
+CONSTEXPR inline Integer<T>
+computeQuotientBinary(Integer<T> const& dividend, S const& divisor)
 {
-    return computeQuotientBinary(dividend, Integer<T, Vector>(divisor));
+    return computeQuotientBinary(dividend, Integer<T>(divisor));
 }
 
-template <typename T, typename S,class Vector>
+template <typename T, typename S,class cu::vector<T>>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-computeQuotientBinary(S const& dividend, Integer<T, Vector> const& divisor)
+CONSTEXPR inline Integer<T>
+computeQuotientBinary(S const& dividend, Integer<T> const& divisor)
 {
-    return computeQuotientBinary(Integer<T, Vector>(dividend), divisor);
+    return computeQuotientBinary(Integer<T>(dividend), divisor);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-computeQrBinary(Integer<T, Vector> const& dividend,
-                Integer<T, Vector> const& divisor)
+CONSTEXPR inline cu::pair<Integer<T>, Integer<T> >
+computeQrBinary(Integer<T> const& dividend,
+                Integer<T> const& divisor)
 {
-    cu::pair<Integer<T, Vector>, Integer<T, Vector> > qr{computeQuotientBinary(dividend, divisor), Integer<T, Vector>(0)};
+    cu::pair<Integer<T>, Integer<T> > qr{computeQuotientBinary(dividend, divisor), Integer<T>(0)};
     qr.second = dividend.abs() - qr.first.abs() * divisor.abs();
 
     if (dividend < 0 && divisor < 0)
@@ -3599,52 +3613,52 @@ computeQrBinary(Integer<T, Vector> const& dividend,
     return qr;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-computeQrBinary(Integer<T, Vector> const& dividend, S const& divisor)
+CONSTEXPR inline cu::pair<Integer<T>, Integer<T> >
+computeQrBinary(Integer<T> const& dividend, S const& divisor)
 {
-    return computeQrBinary(dividend, Integer<T, Vector>(divisor));
+    return computeQrBinary(dividend, Integer<T>(divisor));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-computeQrBinary(S const& dividend, Integer<T, Vector> const& divisor)
+CONSTEXPR inline cu::pair<Integer<T>, Integer<T> >
+computeQrBinary(S const& dividend, Integer<T> const& divisor)
 {
-    return computeQrBinary(Integer<T, Vector>(dividend), divisor);
+    return computeQrBinary(Integer<T>(dividend), divisor);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-computeQuotientBurnikelZiegler(Integer<T, Vector> dividend,
-                               Integer<T, Vector> const& divisor)
+CONSTEXPR inline Integer<T>
+computeQuotientBurnikelZiegler(Integer<T> dividend,
+                               Integer<T> const& divisor)
 {
     if (!divisor)
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
     }
     else if (!dividend)
-        return Integer<T, Vector>{0};
+        return Integer<T>{0};
     else if (dividend.isNan())
         return dividend;
     else if (divisor.isNan())
         return divisor;
     else if (dividend.isInfinity() || divisor.isInfinity())
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return n;
     }
     else if (divisor.abs() > dividend.abs())
-        return Integer<T, Vector>{0};
+        return Integer<T>{0};
 
-    cu::pair<Integer<T, Vector>, Integer<T, Vector> > qr;
+    cu::pair<Integer<T>, Integer<T> > qr;
     qr = computeQrBurnikelZiegler(dividend, divisor);
 
     if (dividend < 0 && divisor < 0)
@@ -3666,27 +3680,27 @@ computeQuotientBurnikelZiegler(Integer<T, Vector> dividend,
     return qr.first;
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-computeQuotientBurnikelZiegler(Integer<T, Vector> const& dividend, S const& divisor)
+CONSTEXPR inline Integer<T>
+computeQuotientBurnikelZiegler(Integer<T> const& dividend, S const& divisor)
 {
-    return computeQuotientBurnikelZiegler(dividend, Integer<T, Vector>(divisor));
+    return computeQuotientBurnikelZiegler(dividend, Integer<T>(divisor));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector>
-computeQuotientBurnikelZiegler(S const& dividend, Integer<T, Vector> const& divisor)
+CONSTEXPR inline Integer<T>
+computeQuotientBurnikelZiegler(S const& dividend, Integer<T> const& divisor)
 {
-    return computeQuotientBurnikelZiegler(Integer<T, Vector>(dividend), divisor);
+    return computeQuotientBurnikelZiegler(Integer<T>(dividend), divisor);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__
-void inner1(std::vector<Integer<T, Vector> >& a_digits, Integer<T, Vector> const& x,
-            Integer<T, Vector> const& L,
-            Integer<T, Vector> const& R, Integer<T, Vector> const& n)
+void inner1(cu::vector<Integer<T> >& a_digits, Integer<T> const& x,
+            Integer<T> const& L,
+            Integer<T> const& R, Integer<T> const& n)
 {
     if (L + 1 == R)
     {
@@ -3708,28 +3722,28 @@ void inner1(std::vector<Integer<T, Vector> >& a_digits, Integer<T, Vector> const
     inner1(a_digits, upper, mid, R, n);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__
-std::vector<Integer<T, Vector> > _int2digits(Integer<T, Vector> const& a,
-                                             Integer<T, Vector> const& n)
+cu::vector<Integer<T> > _int2digits(Integer<T> const& a,
+                                             Integer<T> const& n)
 {
     assert(a >= 0);
 
     if (!a)
-        return std::vector<Integer<T, Vector> >{Integer<T, Vector>(0)};
+        return cu::vector<Integer<T> >{Integer<T>(0)};
 
-    std::vector<Integer<T, Vector> > a_digits((a.number() + n - 1).template cast<longest_type>() / n, Integer<T, Vector>(0));
+    cu::vector<Integer<T> > a_digits(((a.number() + n - 1).template cast<longest_type>() / n).template cast<longest_type>(), Integer<T>(0));
 
     if (a)
-        inner1(a_digits, a, Integer<T, Vector>(0), Integer<T, Vector>(a_digits.size()), n);
+        inner1(a_digits, a, Integer<T>(0), Integer<T>(a_digits.size()), n);
 
     return a_digits;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__
-Integer<T, Vector> inner2(std::vector<Integer<T, Vector> > const& digits, Integer<T, Vector> const& L,
-                          Integer<T, Vector> const& R, Integer<T, Vector> const& n)
+Integer<T> inner2(cu::vector<Integer<T> > const& digits, Integer<T> const& L,
+                          Integer<T> const& R, Integer<T> const& n)
 {
     if (L + 1 == R)
        return digits[L];
@@ -3744,15 +3758,15 @@ Integer<T, Vector> inner2(std::vector<Integer<T, Vector> > const& digits, Intege
     return (inner2(digits, mid, R, n) << shift) + inner2(digits, L, mid, n);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-_div2n1n(Integer<T, Vector> a, Integer<T, Vector> b,
-         Integer<T, Vector> n)
+cu::pair<Integer<T>, Integer<T> >
+_div2n1n(Integer<T> a, Integer<T> b,
+         Integer<T> n)
 {
     if (a.template fits<longest_type>() && b.template fits<longest_type>())
-        return {Integer<T, Vector>(a.template cast<longest_type>() / b.template cast<longest_type>()),
-                Integer<T, Vector>(a.template cast<longest_type>() % b.template cast<longest_type>())};
+        return {Integer<T>(a.template cast<longest_type>() / b.template cast<longest_type>()),
+                Integer<T>(a.template cast<longest_type>() % b.template cast<longest_type>())};
 
     auto pad(n & 1);
 
@@ -3764,7 +3778,7 @@ _div2n1n(Integer<T, Vector> a, Integer<T, Vector> b,
     }
 
     auto const half_n(n >> 1);
-    Integer<T, Vector> mask(1);
+    Integer<T> mask(1);
     mask <<= half_n;
     --mask;
     auto const b1(b >> half_n);
@@ -3785,14 +3799,14 @@ _div2n1n(Integer<T, Vector> a, Integer<T, Vector> b,
     return {q1, r};
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-_div3n2n(Integer<T, Vector> const& a12, Integer<T, Vector> const& a3,
-         Integer<T, Vector> const& b, Integer<T, Vector> const& b1,
-         Integer<T, Vector> const& b2, Integer<T, Vector> const& n)
+cu::pair<Integer<T>, Integer<T> >
+_div3n2n(Integer<T> const& a12, Integer<T> const& a3,
+         Integer<T> const& b, Integer<T> const& b1,
+         Integer<T> const& b2, Integer<T> const& n)
 {
-    Integer<T, Vector> q, r;
+    Integer<T> q, r;
 
     if (a12 >> n == b1)
     {
@@ -3828,47 +3842,47 @@ _div3n2n(Integer<T, Vector> const& a12, Integer<T, Vector> const& a3,
     return {q, r};
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-Integer<T, Vector> _digits2int(std::vector<Integer<T, Vector> > const& digits,
-                               Integer<T, Vector> const& n)
+Integer<T> _digits2int(cu::vector<Integer<T> > const& digits,
+                               Integer<T> const& n)
 {
     if (!digits.size())
-        return Integer<T, Vector>(0);
+        return Integer<T>(0);
 
-    return inner2(digits, Integer<T, Vector>(0), Integer<T, Vector>(digits.size()), n);
+    return inner2(digits, Integer<T>(0), Integer<T>(digits.size()), n);
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-computeQrBurnikelZiegler(Integer<T, Vector> const& dividend,
-                         Integer<T, Vector> const& divisor)
+CONSTEXPR inline cu::pair<Integer<T>, Integer<T> >
+computeQrBurnikelZiegler(Integer<T> const& dividend,
+                         Integer<T> const& divisor)
 {
     if (!divisor)
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return {n, n};
     }
     else if (!dividend)
-        return {Integer<T, Vector>{0}, Integer<T, Vector>{0}};
+        return {Integer<T>{0}, Integer<T>{0}};
     else if (dividend.isNan())
         return {dividend, dividend};
     else if (divisor.isNan())
         return {divisor, divisor};
     else if (dividend.isInfinity() || divisor.isInfinity())
     {
-        Integer<T, Vector> n;
+        Integer<T> n;
         n.setNan();
 
         return {n, n};
     }
     else if (divisor.abs() > dividend.abs())
-        return {Integer<T, Vector>(0), dividend};
+        return {Integer<T>(0), dividend};
     else if (divisor.abs() == 1)
-        return {divisor.sign() * dividend, Integer<T, Vector>(0)};
+        return {divisor.sign() * dividend, Integer<T>(0)};
     else if (dividend < 0 && divisor < 0)
     {
         auto qr{computeQrBurnikelZiegler(-dividend, -divisor)};
@@ -3913,9 +3927,9 @@ computeQrBurnikelZiegler(Integer<T, Vector> const& dividend,
     auto const n{divisor.number()};
     auto const a_digits(_int2digits(dividend, n));
 
-    Integer<T, Vector> r(0);
-    Integer<T, Vector> q(0);
-    std::vector<Integer<T, Vector> > q_digits;
+    Integer<T> r(0);
+    Integer<T> q(0);
+    cu::vector<Integer<T> > q_digits;
 
     for (auto it{a_digits.rbegin()}; it != a_digits.rend(); ++it)
     {
@@ -3933,34 +3947,79 @@ computeQrBurnikelZiegler(Integer<T, Vector> const& dividend,
     return {q, r};
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-computeQrBurnikelZiegler(Integer<T, Vector> const& dividend, S const& divisor)
+CONSTEXPR inline cu::pair<Integer<T>, Integer<T> >
+computeQrBurnikelZiegler(Integer<T> const& dividend, S const& divisor)
 {
-    return computeQrBurnikelZiegler(dividend, Integer<T, Vector>(divisor));
+    return computeQrBurnikelZiegler(dividend, Integer<T>(divisor));
 }
 
-template <typename T, typename S, class Vector>
+template <typename T, typename S>
 __device__ __host__ 
-CONSTEXPR inline cu::pair<Integer<T, Vector>, Integer<T, Vector> >
-computeQrBurnikelZiegler(S const& dividend, Integer<T, Vector> const& divisor)
+CONSTEXPR inline cu::pair<Integer<T>, Integer<T> >
+computeQrBurnikelZiegler(S const& dividend, Integer<T> const& divisor)
 {
-    return computeQrBurnikelZiegler(Integer<T, Vector>(dividend), divisor);
+    return computeQrBurnikelZiegler(Integer<T>(dividend), divisor);
 }
 
-template <typename T, class Vector>
+__host__ inline Integerc operator""_zc(char const* str)
+{
+    return Integerc(str);
+}
+
+__host__ inline Integers operator""_zs(char const* str)
+{
+    return Integers(str);
+}
+
+__host__ inline Integeri operator""_zi(char const* str)
+{
+    return Integeri(str);
+}
+
+__host__ inline Integerl operator""_zl(char const* str)
+{
+    return Integerl(str);
+}
+
+__host__ inline Integerll operator""_zll(char const* str)
+{
+    return Integerll(str);
+}
+
+__host__ inline Integer8 operator""_z8(char const* str)
+{
+    return Integer8(str);
+}
+
+__host__ inline Integer16 operator""_z16(char const* str)
+{
+    return Integer16(str);
+}
+
+__host__ inline Integer32 operator""_z32(char const* str)
+{
+    return Integer32(str);
+}
+
+__host__ inline Integer<longest_type> operator""_z(char const* str)
+{
+    return Integer<longest_type>(str);
+}
+
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> const& min(Integer<T, Vector> const& a,
-                                               Integer<T, Vector> const& b)
+CONSTEXPR inline Integer<T> const& min(Integer<T> const& a,
+                                               Integer<T> const& b)
 {
     return a < b ? a : b;
 }
 
-template <typename T, class Vector>
+template <typename T>
 __device__ __host__ 
-CONSTEXPR inline Integer<T, Vector> const& max(Integer<T, Vector> const& a,
-                                               Integer<T, Vector> const& b)
+CONSTEXPR inline Integer<T> const& max(Integer<T> const& a,
+                                               Integer<T> const& b)
 {
     return a > b ? a : b;
 }
