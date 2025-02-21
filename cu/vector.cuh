@@ -274,7 +274,7 @@ namespace cu
                     {
                         auto tmp(*this);
 
-                        return tmp -= i;
+                        return tmp += i;
                     }
             
                     __device__ __host__ const_reverse_iterator& operator-=(size_t i)
@@ -288,7 +288,7 @@ namespace cu
                     {
                         auto tmp(*this);
 
-                        return tmp += i;
+                        return tmp -= i;
                     }
             
                     __device__ __host__ bool operator!=(const_reverse_iterator const& other) const
@@ -374,7 +374,7 @@ namespace cu
                     {
                         auto tmp(*this);
 
-                        return tmp -= i;
+                        return tmp += i;
                     }
             
                     __device__ __host__ reverse_iterator& operator-=(size_t i)
@@ -388,7 +388,7 @@ namespace cu
                     {
                         auto tmp(*this);
 
-                        return tmp += i;
+                        return tmp -= i;
                     }
             
                     __device__ __host__ bool operator!=(reverse_iterator const& other) const
@@ -531,7 +531,7 @@ namespace cu
             __device__ __host__ T const& at(size_t i) const
             {
                 if (i >= size_)
-                    throw std::out_of_range("");
+                    throw std::out_of_range("Index out of range");
 
                 return data_[i];
             }
@@ -539,7 +539,7 @@ namespace cu
             __device__ __host__ T& at(size_t i)
             {
                 if (i >= size_)
-                    throw std::out_of_range("");
+                    throw std::out_of_range("Index out of range");
 
                 return data_[i];
             }
@@ -587,15 +587,16 @@ namespace cu
             }
 
             template <class InputIt>
-            __device__ __host__ void insert(iterator pos, InputIt first, InputIt last)
+            __device__ __host__ void insert(const_iterator pos, InputIt first, InputIt last)
             {
+                size_t const i{cu::distance(cbegin(), pos)};
                 size_t const n{cu::distance(first, last)};
 
                 resize(size_ + n);
 
-                cu::move_backward(pos, end() - n, end());
+                cu::move_backward(begin() + i, end() - n, end());
 
-                cu::copy(first, last, pos);
+                cu::copy(first, last, begin() + i);
             }
 
             __device__ __host__ iterator begin()
