@@ -4,10 +4,10 @@
 
 template <typename T>
 __global__ void isPrime(T const* nData, size_t nDataSize, unsigned int const* p, size_t primesSize, int* isPrime, size_t reps = 25)
-{
-    Integer<T, cu::vector<T> > const n(nData, nData + nDataSize);
-    
-    *isPrime = n.isPrime(p, primesSize, reps);
+{printf("yo0\n");
+    Integer<T> const n(nData, nData + nDataSize);
+printf("yo1\n");
+    *isPrime = n.isPrime(p, primesSize, reps);printf("yo2\n");
 }
 
 int main()
@@ -19,23 +19,24 @@ int main()
     int* prime;
     cudaMalloc(&prime, sizeof(int));
 
-    using T = unsigned long long;
-    using Z = Integer<T, std::vector<T> >;
+    using T = uint64_t;
     
     {
-        Z const n(23 * 29);
-        
-        T* nData(nullptr);    
-        cudaMalloc(&nData, sizeof(T) * n.bits().size());
-        memcpy(nData, n.bits().data(), sizeof(T) * n.bits().size());
-        
+        auto const n(23 * 29_z);
+
         auto t{std::chrono::steady_clock::now()};
         std::cout << n.isPrime() << std::endl;
         std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t).count() << " ms" << std::endl;
 
-        t = std::chrono::steady_clock::now();
+        T* nData(nullptr);    
+        cudaMalloc(&nData, sizeof(T) * n.bits().size());
+        cudaMemcpy(nData, n.bits().data(), sizeof(T) * n.bits().size(), cudaMemcpyHostToDevice);
+        
+        t = std::chrono::steady_clock::now();std::cout << "hey6" << std::endl;
         isPrime<T><<<1, 1>>>(nData, n.bits().size(), p, primes.size(), prime);
-
+std::cout << "hey7" << std::endl;
+        cudaDeviceSynchronize();
+std::cout << "hey8" << std::endl;
         int pr;
         cudaMemcpy(&pr, prime, sizeof(int), cudaMemcpyDeviceToHost);
 
@@ -48,8 +49,7 @@ int main()
     }
 /*
     {
-        std::string const s("56062005704198360319209");
-        Z const n(s);
+        auto const n(56062005704198360319209_z);
         
         auto t{std::chrono::steady_clock::now()};
         std::cout << n.isPrime() << std::endl;
@@ -57,8 +57,7 @@ int main()
     }
 
     {
-        std::string const s("4113101149215104800030529537915953170486139623539759933135949994882770404074832568499");
-        Z const n(s);
+        auto const n(4113101149215104800030529537915953170486139623539759933135949994882770404074832568499_z);
 
         auto t{std::chrono::steady_clock::now()};
         std::cout << n.isPrime() << std::endl;
@@ -66,7 +65,7 @@ int main()
     }
 
     {
-        Z n;
+        Integer64 n;
         n.setPrecision(1024 / 64);
         n.setRandom<std::random_device>();
         n.setPositive();
