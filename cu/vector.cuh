@@ -415,10 +415,13 @@ namespace cu
             __device__ __host__ vector(size_t count, T const& value = T()) : size_{count}, capacity_{count}
             {
 #ifdef __CUDA_ARCH__
-                cudaMalloc(&data_, sizeof(T) * count);
+                auto const r{cudaMalloc(&data_, sizeof(T) * count)};
+
+                assert(r == cudaSuccess);
 #else
                 data_ = new T[count];
 #endif
+                assert(data_);
 
                 for (size_t i{0}; i < size_; ++i)
                     this->operator[](i) = value;
@@ -443,7 +446,8 @@ namespace cu
             __device__ __host__ ~vector()
             {
 #ifdef __CUDA_ARCH__
-                cudaFree(data_);
+                auto const r{cudaFree(data_)};
+                assert(r == cudaSuccess);
 #else
                 delete[] data_;
 #endif
@@ -471,14 +475,20 @@ namespace cu
                 T* d{nullptr};
 
 #ifdef __CUDA_ARCH__
-                cudaMalloc(&d, sizeof(T) * capacity);
+                auto r{cudaMalloc(&d, sizeof(T) * capacity)};
+
+                assert(r == cudaSuccess);
+                assert(d);
 
                 for (size_t i{0}; i < size_; ++i)
                     d[i] = data_[i];
 
-                cudaFree(data_);
+                r = cudaFree(data_);
+                assert(r == cudaSuccess);
 #else
                 d = new T[capacity];
+
+                assert(d);
 
                 for (size_t i{0}; i < size_; ++i)
                     d[i] = data_[i];
