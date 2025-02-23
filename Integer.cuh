@@ -515,8 +515,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         __host__ CONSTEXPR void invert() noexcept
         {
             T* a(nullptr);
-            cudaMalloc(&a, sizeof(T) * size());
-            cudaMemcpy(a, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice);
+            auto r{cudaMalloc(&a, sizeof(T) * size())};
+            assert(r == cudaSuccess);
+            assert(a);
+            r = cudaMemcpy(a, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice);
+            assert(r == cudaSuccess);
 
             size_t const blockSize{BLOCK_SIZE};
             size_t const gridSize{(bits_.size() + blockSize) / blockSize};
@@ -525,9 +528,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             
             cudaDeviceSynchronize();
             
-            cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost);
+            r = cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost);
+            assert(r == cudaSuccess);
 
-            cudaFree(a);
+            r = cudaFree(a);
+            assert(r == cudaSuccess);
             
             if (autoAdjust_)
                 adjust();
@@ -1730,12 +1735,15 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 #endif
 
             T* a(nullptr);
-            cudaMalloc(&a, sizeof(T) * bits_.size());
+            auto r{cudaMalloc(&a, sizeof(T) * bits_.size())};
+            assert(r == cudaSuccess);
+            assert(a);
             
 #ifdef __CUDA_ARCH__
             memcpy(a, bits_.data(), sizeof(T) * bits_.size());
 #else
-            cudaMemcpy(a, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice);
+            r = cudaMemcpy(a, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice);
+            assert(r == cudaSuccess);
 #endif
 
             size_t const blockSize{BLOCK_SIZE};
@@ -1752,10 +1760,12 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 #else
             cudaDeviceSynchronize();
 
-            cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost);
+            r = cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost);
+            assert(r == cudaSuccess);
 #endif
 
-            cudaFree(a);
+            r = cudaFree(a);
+            assert(r == cudaSuccess);
         }
 
         __device__ CONSTEXPR int isPrime(unsigned int const* primes, size_t primesSize,
@@ -1788,15 +1798,21 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 auto const sqrtLimit(sqrt(*this));
                 
                 bool* divisible(nullptr);
-                cudaMalloc(&divisible, sizeof(bool));
+                auto r{cudaMalloc(&divisible, sizeof(bool))};
+                assert(r == cudaSuccess);
+                assert(divisible);
                 *divisible = false;
                 
                 T* numberData(nullptr);    
-                cudaMalloc(&numberData, sizeof(T) * bits_.size());
+                r = cudaMalloc(&numberData, sizeof(T) * bits_.size());
+                assert(r == cudaSuccess);
+                assert(numberData);
                 memcpy(numberData, bits_.data(), sizeof(T) * bits_.size());
                 
                 T* sqrtLimitData(nullptr);
-                cudaMalloc(&sqrtLimitData, sizeof(T) * sqrtLimit.bits_.size());
+                r = cudaMalloc(&sqrtLimitData, sizeof(T) * sqrtLimit.bits_.size());
+                assert(r == cudaSuccess);
+                assert(sqrtLimitData);
                 memcpy(sqrtLimitData, sqrtLimit.bits_.data(), sizeof(T) * sqrtLimit.bits_.size());
                 
                 size_t const blockSize{BLOCK_SIZE};
@@ -1806,18 +1822,22 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                                                           numberData, bits_.size(),
                                                                           sqrtLimitData, sqrtLimit.bits_.size(),
                                                                           divisible);
-                
-                cudaFree(numberData);
-                cudaFree(sqrtLimitData);
+
+                r = cudaFree(numberData);
+                assert(r == cudaSuccess);
+                r = cudaFree(sqrtLimitData);
+                assert(r == cudaSuccess);
 
                 if (*divisible)
                 {
-                    cudaFree(divisible);
+                    r = cudaFree(divisible);
+                    assert(r == cudaSuccess);
 
                     return 0;
                 }
 
-                cudaFree(divisible);
+                r = cudaFree(divisible);
+                assert(r == cudaSuccess);
                 
                 if (sqrtLimit < primes[primesSize - 1])
                     return 2;
@@ -1898,20 +1918,27 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                                                         R2modmData, R2modm.bits_.size(),
                                                                         divisible, reps);
 
-                cudaFree(numberData);
-                cudaFree(sData);
-                cudaFree(RData);
-                cudaFree(m_Data);
-                cudaFree(R2modmData);
+                auto r{cudaFree(numberData)};
+                assert(r == cudaSuccess);
+                r = cudaFree(sData);
+                assert(r == cudaSuccess);
+                r = cudaFree(RData);
+                assert(r == cudaSuccess);
+                r = cudaFree(m_Data);
+                assert(r == cudaSuccess);
+                r = cudaFree(R2modmData);
+                assert(r == cudaSuccess);
                 
                 if (*divisible)
                 {
-                    cudaFree(divisible);
+                    r = cudaFree(divisible);
+                    assert(r == cudaSuccess);
 
                     return 0;
                 }
 
-                cudaFree(divisible);
+                r = cudaFree(divisible);
+                assert(r == cudaSuccess);
             }
 
             return 1;

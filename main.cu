@@ -12,12 +12,17 @@ printf("yo1\n");
 
 int main()
 {
-    unsigned int* p;
-    cudaMalloc(&p, sizeof(unsigned int) * primes.size());
-    cudaMemcpy(p, primes.data(), sizeof(unsigned int) * primes.size(), cudaMemcpyHostToDevice);
+    unsigned int* p(nullptr);
+    auto r{cudaMalloc(&p, sizeof(unsigned int) * primes.size())};
+    assert(r == cudaSuccess);
+    assert(p);
+    r = cudaMemcpy(p, primes.data(), sizeof(unsigned int) * primes.size(), cudaMemcpyHostToDevice);
+    assert(r == cudaSuccess);
 
-    int* prime;
-    cudaMalloc(&prime, sizeof(int));
+    int* prime(nullptr);
+    r = cudaMalloc(&prime, sizeof(int));
+    assert(r == cudaSuccess);
+    assert(prime);
 
     using T = uint64_t;
     
@@ -29,8 +34,11 @@ int main()
         std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t).count() << " ms" << std::endl;
 
         T* nData(nullptr);    
-        cudaMalloc(&nData, sizeof(T) * n.bits().size());
-        cudaMemcpy(nData, n.bits().data(), sizeof(T) * n.bits().size(), cudaMemcpyHostToDevice);
+        r = cudaMalloc(&nData, sizeof(T) * n.bits().size());
+        assert(r == cudaSuccess);
+        assert(nData);
+        r = cudaMemcpy(nData, n.bits().data(), sizeof(T) * n.bits().size(), cudaMemcpyHostToDevice);
+        assert(r == cudaSuccess);
         
         t = std::chrono::steady_clock::now();std::cout << "hey6" << std::endl;
         isPrime<T><<<1, 1>>>(nData, n.bits().size(), p, primes.size(), prime);
@@ -38,7 +46,8 @@ std::cout << "hey7" << std::endl;
         cudaDeviceSynchronize();
 std::cout << "hey8" << std::endl;
         int pr;
-        cudaMemcpy(&pr, prime, sizeof(int), cudaMemcpyDeviceToHost);
+        r = cudaMemcpy(&pr, prime, sizeof(int), cudaMemcpyDeviceToHost);
+        assert(r == cudaSuccess);
 
         std::cout << pr << std::endl;
         std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t).count() << " ms" << std::endl;
@@ -77,8 +86,10 @@ std::cout << "hey8" << std::endl;
         std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t).count() << " ms" << std::endl;
     }
 */
-    cudaFree(p);
-    cudaFree(prime);
+    r = cudaFree(p);
+    assert(r == cudaSuccess);
+    r = cudaFree(prime);
+    assert(r == cudaSuccess);
 
     return 0;
 }
