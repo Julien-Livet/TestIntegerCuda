@@ -27,10 +27,14 @@ int main()
     r = cudaDeviceSetLimit(cudaLimitStackSize, 256 * 256);
     assert(r == cudaSuccess);
 
-    using T = uint64_t;
+    r = cudaDeviceSetLimit(cudaLimitMallocHeapSize, 256 * 256);
+    assert(r == cudaSuccess);
+    
+    using T = uintmax_t;
     
     {
         std::cout << "Block #1" << std::endl;
+        cudaMemset(prime, -1, sizeof(int));
 
         auto const n(23 * 29_z);
 
@@ -50,7 +54,7 @@ int main()
 
         cudaDeviceSynchronize();
 
-        int pr;
+        int pr(-1);
         r = cudaMemcpy(&pr, prime, sizeof(int), cudaMemcpyDeviceToHost);
         assert(r == cudaSuccess);
 
@@ -62,6 +66,7 @@ int main()
 
     {
         std::cout << "Block #2" << std::endl;
+        cudaMemset(prime, -1, sizeof(int));
 
         auto const n(1299709 * 1299721_z);
 
@@ -81,7 +86,7 @@ int main()
 
         cudaDeviceSynchronize();
 
-        int pr;
+        int pr(-1);
         r = cudaMemcpy(&pr, prime, sizeof(int), cudaMemcpyDeviceToHost);
         assert(r == cudaSuccess);
 
@@ -93,12 +98,12 @@ int main()
 
     {
         std::cout << "Block #3" << std::endl;
+        cudaMemset(prime, -1, sizeof(int));
     
         auto const n(56062005704198360319209_z);
 
         auto t{std::chrono::steady_clock::now()};
         std::cout << n.isPrime() << std::endl;
-
         std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t).count() << " ms" << std::endl;
 
         T* nData(nullptr);    
@@ -113,7 +118,7 @@ int main()
 
         cudaDeviceSynchronize();
 
-        int pr;
+        int pr(-1);
         r = cudaMemcpy(&pr, prime, sizeof(int), cudaMemcpyDeviceToHost);
         assert(r == cudaSuccess);
 
@@ -125,6 +130,7 @@ int main()
 
     {
         std::cout << "Block #4" << std::endl;
+        cudaMemset(prime, -1, sizeof(int));
 
         auto const n(4113101149215104800030529537915953170486139623539759933135949994882770404074832568499_z);
 
@@ -140,7 +146,7 @@ int main()
 
         cudaDeviceSynchronize();
 
-        int pr;
+        int pr(-1);
         r = cudaMemcpy(&pr, prime, sizeof(int), cudaMemcpyDeviceToHost);
         assert(r == cudaSuccess);
 
@@ -152,6 +158,7 @@ int main()
 
     {
         std::cout << "Block #5" << std::endl;
+        cudaMemset(prime, -1, sizeof(int));
 
         Integer64 n;
         n.setPrecision(1024 / 64);
@@ -160,19 +167,19 @@ int main()
         if (!(n % 2))
             ++n;
 
-        T* nData(nullptr);    
-        r = cudaMalloc(&nData, sizeof(T) * n.bits().size());
+            uint64_t* nData(nullptr);    
+        r = cudaMalloc(&nData, sizeof(uint64_t) * n.bits().size());
         assert(r == cudaSuccess);
         assert(nData);
-        r = cudaMemcpy(nData, n.bits().data(), sizeof(T) * n.bits().size(), cudaMemcpyHostToDevice);
+        r = cudaMemcpy(nData, n.bits().data(), sizeof(uint64_t) * n.bits().size(), cudaMemcpyHostToDevice);
         assert(r == cudaSuccess);
         
         auto const t{std::chrono::steady_clock::now()};
-        isPrime<T><<<1, 1>>>(nData, n.bits().size(), p, primes.size(), prime);
+        isPrime<uint64_t><<<1, 1>>>(nData, n.bits().size(), p, primes.size(), prime);
 
         cudaDeviceSynchronize();
 
-        int pr;
+        int pr(-1);
         r = cudaMemcpy(&pr, prime, sizeof(int), cudaMemcpyDeviceToHost);
         assert(r == cudaSuccess);
 
