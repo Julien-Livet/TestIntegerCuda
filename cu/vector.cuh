@@ -602,8 +602,8 @@ namespace cu
             template <class InputIt>
             __device__ __host__ void insert(const_iterator pos, InputIt first, InputIt last)
             {
-                size_t const i{cu::distance(cbegin(), pos)};
-                size_t const n{cu::distance(first, last)};
+                auto const i{cu::distance(cbegin(), pos)};
+                auto const n{cu::distance(first, last)};
 
                 resize(size_ + n);
 
