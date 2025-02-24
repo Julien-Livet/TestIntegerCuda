@@ -1,4 +1,5 @@
 #!/bin/bash
-#nvcc --expt-relaxed-constexpr -rdc=true --std c++20 -v -Xcompiler -Wall -w -Xcompiler -v --ptxas-options=-v main.cu -o TestIntegerCuda
-#nvcc --expt-relaxed-constexpr -rdc=true --std c++20 -Xcompiler -Wall -w main.cu -o TestIntegerCuda
-nvcc --expt-relaxed-constexpr -rdc=true --std c++20 -Xcompiler -Wall main.cu -o TestIntegerCuda
+#Release
+#nvcc -D__CDPRT_SUPPRESS_SYNC_DEPRECATION_WARNING -DCUDA_FORCE_CDP1_IF_SUPPORTED -diag-suppress 23,63,2361 --expt-relaxed-constexpr -rdc=true --std c++20 -DNDEBUG -Xcompiler -Wall main.cu -o TestIntegerCuda
+#Debug
+nvcc -D__CDPRT_SUPPRESS_SYNC_DEPRECATION_WARNING -DCUDA_FORCE_CDP1_IF_SUPPORTED -G -g -diag-suppress 23,63,2361 --expt-relaxed-constexpr -rdc=true --std c++20 -Xcompiler -Wall main.cu -o TestIntegerCuda
