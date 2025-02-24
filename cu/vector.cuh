@@ -414,14 +414,17 @@ namespace cu
 
             __device__ __host__ vector(size_t count, T const& value = T()) : size_{count}, capacity_{count}
             {
+                if (count)
+                {
 #ifdef __CUDA_ARCH__
-                auto const r{cudaMalloc(&data_, sizeof(T) * count)};
+                    auto const r{cudaMalloc(&data_, sizeof(T) * count)};
 
-                assert(r == cudaSuccess);
+                    assert(r == cudaSuccess);
 #else
-                data_ = new T[count];
+                    data_ = new T[count];
 #endif
-                assert(data_);
+                    assert(data_);
+                }
 
                 for (size_t i{0}; i < size_; ++i)
                     this->operator[](i) = value;
