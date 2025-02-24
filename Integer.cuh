@@ -43,8 +43,8 @@
 
 using longest_type = uintmax_t;
 
-//#include "primes_3_000_000.h"
-#include "primes_100.h"
+#include "primes_3_000_000.h"
+//#include "primes_100.h"
 
 #define BLOCK_SIZE 1024
 
@@ -104,7 +104,7 @@ __global__ void Integer_isPrime_trialDivision(unsigned int const* primes, size_t
                            numberData + numberDataSize);
         Integer<T> const s(sqrtLimitData,
                            sqrtLimitData + numberDataSize);
-        
+
         if (primes[idx] <= s && !(n % primes[idx]))
             *divisible = true;
     }
@@ -646,9 +646,10 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                   bits.rbegin());
                         Integer const x0(bits);
                         bits = cu::vector<T>(m, T{0});
-                        cu::copy(bits_.rbegin() + m,
-                                  bits_.rbegin() + cu::min(bits_.size(), 2 * m),
-                                  bits.rbegin());
+                        if (cu::min(bits_.size(), 2 * m) >= m)
+                            cu::copy(bits_.rbegin() + m,
+                                    bits_.rbegin() + cu::min(bits_.size(), 2 * m),
+                                    bits.rbegin());
                         Integer const x1(bits);
                         bits = cu::vector<T>(m, T{0});
                         cu::copy(other.bits_.rbegin(),
@@ -656,9 +657,10 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                   bits.rbegin());
                         Integer const y0(bits);
                         bits = cu::vector<T>(m, T{0});
-                        cu::copy(other.bits_.rbegin() + m,
-                                  other.bits_.rbegin() + cu::min(other.bits_.size(), 2 * m),
-                                  bits.rbegin());
+                        if (cu::min(other.bits_.size(), 2 * m) >= m)
+                            cu::copy(other.bits_.rbegin() + m,
+                                    other.bits_.rbegin() + cu::min(other.bits_.size(), 2 * m),
+                                    bits.rbegin());
                         Integer const y1(bits);
 
                         assert(*this == ((x1 << (m * sizeof(T) * 8)) | x0));
@@ -913,7 +915,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 else
                 {
                     auto const qr{computeQrBurnikelZiegler(*this, other)};
-
+                    
                     assert(*this == qr.first * rhs + qr.second);
 
                     *this = qr.second;
@@ -1277,7 +1279,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         __device__ __host__ CONSTEXPR Integer& operator&=(Integer const& other)
         {
             cu::vector<T> bits(cu::max(bits_.size(), other.bits_.size())
-                                  - cu::min(bits_.size(), other.bits_.size()), 0);
+                               - cu::min(bits_.size(), other.bits_.size()), 0);
 
             if (bits_.size() > other.bits_.size())
                 bits.insert(cu::end(bits), cu::begin(other.bits_), cu::end(other.bits_));
@@ -1823,11 +1825,13 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                                                           sqrtLimitData, sqrtLimit.bits_.size(),
                                                                           divisible);
 
+                cudaDeviceSynchronize();
+
                 r = cudaFree(numberData);
                 assert(r == cudaSuccess);
                 r = cudaFree(sqrtLimitData);
                 assert(r == cudaSuccess);
-
+                
                 if (*divisible)
                 {
                     r = cudaFree(divisible);
@@ -1917,6 +1921,8 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                                                         m_Data, m_.bits_.size(),
                                                                         R2modmData, R2modm.bits_.size(),
                                                                         divisible, reps);
+
+                cudaDeviceSynchronize();
 
                 auto r{cudaFree(numberData)};
                 assert(r == cudaSuccess);
@@ -2022,23 +2028,23 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 if (sqrtLimit < primes.back())
                     return 2;
             }
-
+            
             //Miller-Rabin tests
-
+            
             auto s(*this - 1);
-
+            
             while (!(s & 1))
                 s >>= 1;
-
+            
             auto const number(*this - 1);
             auto const& m(*this);
             Integer R(Integer(1) << m.number());
-
+            
             assert(R > m);
 
             if (!(m & 1))
                 ++R;
-
+            
             while (!m.isCoprime(R))
             {
                 if (!(m & 1))
@@ -2049,11 +2055,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 if (!(m & 1))
                     ++R;
             }
-
+            
             auto const R2modm((R * R) % m);
             Integer R_, m_;
             auto const d(gcdExtended(R, -m, R_, m_));
-
+            
             assert(d.abs() == 1);
             assert(R * R_ - m * m_ == d);
 
@@ -2108,10 +2114,10 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                     size_t const end{(i == numThreads - 1) ? reps : (i + 1) * chunkSize};
                     threads.emplace_back(threadFunc, start, end);
                 }
-
+                
                 for (auto& t : threads)
                     t.join();
-
+                
                 if (divisible.load())
                     return 0;
             }
