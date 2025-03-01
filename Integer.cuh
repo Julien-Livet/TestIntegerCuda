@@ -515,24 +515,20 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         __host__ CONSTEXPR void invert() noexcept
         {
             T* a(nullptr);
-            auto r{cudaMalloc(&a, sizeof(T) * size())};
-            assert(r == cudaSuccess);
+            gpuErrchk(cudaMalloc(&a, sizeof(T) * size()));
             assert(a);
-            r = cudaMemcpy(a, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice);
-            assert(r == cudaSuccess);
+            gpuErrchk(cudaMemcpy(a, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice));
 
             size_t const blockSize{BLOCK_SIZE};
             size_t const gridSize{(bits_.size() + blockSize) / blockSize};
             
             Integer_invert<T><<<gridSize, blockSize>>>(a, bits_.size());
             
-            cudaDeviceSynchronize();
+            gpuErrchk(cudaDeviceSynchronize());
             
-            r = cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost);
-            assert(r == cudaSuccess);
+            gpuErrchk(cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost));
 
-            r = cudaFree(a);
-            assert(r == cudaSuccess);
+            gpuErrchk(cudaFree(a));
             
             if (autoAdjust_)
                 adjust();
@@ -1737,15 +1733,13 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 #endif
 
             T* a(nullptr);
-            auto r{cudaMalloc(&a, sizeof(T) * bits_.size())};
-            assert(r == cudaSuccess);
+            gpuErrchk(cudaMalloc(&a, sizeof(T) * bits_.size()));
             assert(a);
             
 #ifdef __CUDA_ARCH__
             memcpy(a, bits_.data(), sizeof(T) * bits_.size());
 #else
-            r = cudaMemcpy(a, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice);
-            assert(r == cudaSuccess);
+            gpuErrchk(cudaMemcpy(a, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice));
 #endif
 
             size_t const blockSize{BLOCK_SIZE};
@@ -1760,14 +1754,12 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 #ifdef __CUDA_ARCH__
             memcpy(bits_.data(), a, sizeof(T) * bits_.size());
 #else
-            cudaDeviceSynchronize();
+            gpuErrchk(cudaDeviceSynchronize());
 
-            r = cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost);
-            assert(r == cudaSuccess);
+            gpuErrchk(cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost));
 #endif
 
-            r = cudaFree(a);
-            assert(r == cudaSuccess);
+            gpuErrchk(cudaFree(a));
         }
 
         __device__ CONSTEXPR int isPrime(unsigned int const* primes, size_t primesSize,
@@ -1800,20 +1792,17 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 auto const sqrtLimit(sqrt(*this));
                 
                 bool* divisible(nullptr);
-                auto r{cudaMalloc(&divisible, sizeof(bool))};
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaMalloc(&divisible, sizeof(bool)));
                 assert(divisible);
                 *divisible = false;
                 
                 T* numberData(nullptr);    
-                r = cudaMalloc(&numberData, sizeof(T) * bits_.size());
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaMalloc(&numberData, sizeof(T) * bits_.size()));
                 assert(numberData);
                 memcpy(numberData, bits_.data(), sizeof(T) * bits_.size());
                 
                 T* sqrtLimitData(nullptr);
-                r = cudaMalloc(&sqrtLimitData, sizeof(T) * sqrtLimit.bits_.size());
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaMalloc(&sqrtLimitData, sizeof(T) * sqrtLimit.bits_.size()));
                 assert(sqrtLimitData);
                 memcpy(sqrtLimitData, sqrtLimit.bits_.data(), sizeof(T) * sqrtLimit.bits_.size());
                 
@@ -1825,23 +1814,19 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                                                           sqrtLimitData, sqrtLimit.bits_.size(),
                                                                           divisible);
 
-                cudaDeviceSynchronize();
+                gpuErrchk(cudaDeviceSynchronize());
 
-                r = cudaFree(numberData);
-                assert(r == cudaSuccess);
-                r = cudaFree(sqrtLimitData);
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaFree(numberData));
+                gpuErrchk(cudaFree(sqrtLimitData));
                 
                 if (*divisible)
                 {
-                    r = cudaFree(divisible);
-                    assert(r == cudaSuccess);
+                    gpuErrchk(cudaFree(divisible));
 
                     return 0;
                 }
 
-                r = cudaFree(divisible);
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaFree(divisible));
                 
                 if (sqrtLimit < primes[primesSize - 1])
                     return 2;
@@ -1889,27 +1874,33 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             
             {
                 bool* divisible(nullptr);
-                cudaMalloc(&divisible, sizeof(bool));
+                gpuErrchk(cudaMalloc(&divisible, sizeof(bool)));
+                assert(divisible);
                 *divisible = false;
 
                 T* numberData(nullptr);
-                cudaMalloc(&numberData, sizeof(T) * number.bits_.size());
+                gpuErrchk(cudaMalloc(&numberData, sizeof(T) * number.bits_.size()));
+                assert(numberData);
                 memcpy(numberData, number.bits_.data(), sizeof(T) * number.bits_.size());
 
                 T* sData(nullptr);
-                cudaMalloc(&sData, sizeof(T) * s.bits_.size());
+                gpuErrchk(cudaMalloc(&sData, sizeof(T) * s.bits_.size()));
+                assert(sData);
                 memcpy(sData, s.bits_.data(), sizeof(T) * s.bits_.size());
                 
                 T* RData(nullptr);
-                cudaMalloc(&RData, sizeof(T) * R.bits_.size());
+                gpuErrchk(cudaMalloc(&RData, sizeof(T) * R.bits_.size()));
+                assert(RData);
                 memcpy(RData, R.bits_.data(), sizeof(T) * R.bits_.size());
 
                 T* m_Data(nullptr);
-                cudaMalloc(&m_Data, sizeof(T) * m_.bits_.size());
+                gpuErrchk(cudaMalloc(&m_Data, sizeof(T) * m_.bits_.size()));
+                assert(m_data);
                 memcpy(m_Data, m_.bits_.data(), sizeof(T) * m_.bits_.size());
 
                 T* R2modmData(nullptr);
-                cudaMalloc(&R2modmData, sizeof(T) * R2modm.bits_.size());
+                gpuErrchk(cudaMalloc(&R2modmData, sizeof(T) * R2modm.bits_.size()));
+                assert(R2modmData);
                 memcpy(R2modmData, R2modm.bits_.data(), sizeof(T) * R2modm.bits_.size());
 
                 size_t const blockSize{BLOCK_SIZE};
@@ -1922,29 +1913,22 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                                                         R2modmData, R2modm.bits_.size(),
                                                                         divisible, reps);
 
-                cudaDeviceSynchronize();
+                gpuErrchk(cudaDeviceSynchronize());
 
-                auto r{cudaFree(numberData)};
-                assert(r == cudaSuccess);
-                r = cudaFree(sData);
-                assert(r == cudaSuccess);
-                r = cudaFree(RData);
-                assert(r == cudaSuccess);
-                r = cudaFree(m_Data);
-                assert(r == cudaSuccess);
-                r = cudaFree(R2modmData);
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaFree(numberData));
+                gpuErrchk(cudaFree(sData));
+                gpuErrchk(cudaFree(RData));
+                gpuErrchk(cudaFree(m_Data));
+                gpuErrchk(cudaFree(R2modmData));
                 
                 if (*divisible)
                 {
-                    r = cudaFree(divisible);
-                    assert(r == cudaSuccess);
+                    gpuErrchk(cudaFree(divisible));
 
                     return 0;
                 }
 
-                r = cudaFree(divisible);
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaFree(divisible));
             }
 
             return 1;

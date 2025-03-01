@@ -8,6 +8,17 @@
 
 #include "iterator.cuh"
 
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+{
+   if (code != cudaSuccess) 
+   {
+      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      if (abort) exit(code);
+   }
+}
+
+#define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
+
 namespace cu
 {
     template <typename T>
@@ -417,9 +428,7 @@ namespace cu
                 if (count)
                 {
 #ifdef __CUDA_ARCH__
-                    auto const r{cudaMalloc(&data_, sizeof(T) * count)};
-
-                    assert(r == cudaSuccess);
+                    gpuErrchk(cudaMalloc(&data_, sizeof(T) * count));
 #else
                     data_ = new T[count];
 #endif
@@ -449,8 +458,7 @@ namespace cu
             __device__ __host__ ~vector()
             {
 #ifdef __CUDA_ARCH__
-                auto const r{cudaFree(data_)};
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaFree(data_));
 #else
                 delete[] data_;
 #endif
@@ -478,16 +486,13 @@ namespace cu
                 T* d{nullptr};
 
 #ifdef __CUDA_ARCH__
-                auto r{cudaMalloc(&d, sizeof(T) * capacity)};
-
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaMalloc(&d, sizeof(T) * capacity));
                 assert(d);
 
                 for (size_t i{0}; i < size_; ++i)
                     d[i] = data_[i];
 
-                r = cudaFree(data_);
-                assert(r == cudaSuccess);
+                gpuErrchk(cudaFree(data_));
 #else
                 d = new T[capacity];
 
