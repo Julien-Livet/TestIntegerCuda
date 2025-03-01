@@ -1895,7 +1895,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
                 T* m_Data(nullptr);
                 gpuErrchk(cudaMalloc(&m_Data, sizeof(T) * m_.bits_.size()));
-                assert(m_data);
+                assert(m_Data);
                 memcpy(m_Data, m_.bits_.data(), sizeof(T) * m_.bits_.size());
 
                 T* R2modmData(nullptr);
@@ -1916,7 +1916,8 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 gpuErrchk(cudaDeviceSynchronize());
 
                 gpuErrchk(cudaFree(numberData));
-                gpuErrchk(cudaFree(sData));
+                gpuErrchk(cudaFree(sData));
+
                 gpuErrchk(cudaFree(RData));
                 gpuErrchk(cudaFree(m_Data));
                 gpuErrchk(cudaFree(R2modmData));
