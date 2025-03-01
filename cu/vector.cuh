@@ -8,7 +8,7 @@
 
 #include "iterator.cuh"
 
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
+__device__ __host__ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
    if (code != cudaSuccess) 
    {
