@@ -3,7 +3,6 @@
 
 #include <cassert>
 #include <compare>
-#include <cstdio>
 
 #include <cuda.h>
 
@@ -13,7 +12,7 @@ __device__ __host__ inline void gpuAssert(cudaError_t code, const char *file, in
 {
    if (code != cudaSuccess) 
    {
-      fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+      printf("GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
       if (abort) exit(code);
    }
 }
