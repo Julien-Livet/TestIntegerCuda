@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <compare>
+#include <cstdio>
 
 #include <cuda.h>
 
