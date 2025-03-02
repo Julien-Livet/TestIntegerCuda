@@ -10,13 +10,16 @@
 
 __device__ __host__ inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)
 {
-   if (code != cudaSuccess) 
-   {
-      printf("GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+    if (code != cudaSuccess) 
+    {
+        printf("GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
 
-      if (abort)
-         assert(0 && code);
-   }
+        if (abort)
+        {
+            printf("GPU error code: %d\n", code);
+            assert(0 && code);
+        }
+    }
 }
 
 #define gpuErrchk(ans) { gpuAssert((ans), __FILE__, __LINE__); }
