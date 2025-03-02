@@ -45,6 +45,7 @@ int main()
         t = std::chrono::steady_clock::now();
         isPrime<T><<<1, 1>>>(nData, n.bits().size(), p, primes.size(), prime);
 
+        gpuErrchk(cudaPeekAtLastError());
         gpuErrchk(cudaDeviceSynchronize());
 
         int pr(-1);

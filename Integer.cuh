@@ -524,6 +524,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             
             Integer_invert<T><<<gridSize, blockSize>>>(a, bits_.size());
             
+            gpuErrchk(cudaPeekAtLastError());
             gpuErrchk(cudaDeviceSynchronize());
             
             gpuErrchk(cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost));
@@ -1754,6 +1755,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 #ifdef __CUDA_ARCH__
             memcpy(bits_.data(), a, sizeof(T) * bits_.size());
 #else
+            gpuErrchk(cudaPeekAtLastError());
             gpuErrchk(cudaDeviceSynchronize());
 
             gpuErrchk(cudaMemcpy(bits_.data(), a, sizeof(T) * bits_.size(), cudaMemcpyDeviceToHost));
@@ -1814,6 +1816,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                                                           sqrtLimitData, sqrtLimit.bits_.size(),
                                                                           divisible);
 
+                gpuErrchk(cudaPeekAtLastError());
                 gpuErrchk(cudaDeviceSynchronize());
 
                 gpuErrchk(cudaFree(numberData));
