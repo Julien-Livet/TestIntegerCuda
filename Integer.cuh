@@ -43,8 +43,8 @@
 
 using longest_type = uintmax_t;
 
-#include "primes_3_000_000.h"
-//#include "primes_100.h"
+//#include "primes_3_000_000.h"
+#include "primes_100.h"
 
 #define BLOCK_SIZE 1024
 
@@ -516,7 +516,13 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         {
             T* a(nullptr);
             gpuErrchk(cudaMalloc(&a, sizeof(T) * size()));
-            assert(a);
+            
+            if (!a)
+            {
+                printf("Failure at %s %d", __FILE__, __LINE__);
+                return;
+            }
+
             gpuErrchk(cudaMemcpy(a, bits_.data(), sizeof(T) * bits_.size(), cudaMemcpyHostToDevice));
 
             size_t const blockSize{BLOCK_SIZE};
@@ -1735,8 +1741,13 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
             T* a(nullptr);
             gpuErrchk(cudaMalloc(&a, sizeof(T) * bits_.size()));
-            assert(a);
-            
+
+            if (!a)
+            {
+                printf("Failure at %s %d", __FILE__, __LINE__);
+                return;
+            }
+
 #ifdef __CUDA_ARCH__
             memcpy(a, bits_.data(), sizeof(T) * bits_.size());
 #else
@@ -1878,32 +1889,68 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             {
                 bool* divisible(nullptr);
                 gpuErrchk(cudaMalloc(&divisible, sizeof(bool)));
-                assert(divisible);
+                
+                if (!divisible)
+                {
+                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    return -1;
+                }
+
                 *divisible = false;
 
                 T* numberData(nullptr);
                 gpuErrchk(cudaMalloc(&numberData, sizeof(T) * number.bits_.size()));
-                assert(numberData);
+                
+                if (!numberData)
+                {
+                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    return -1;
+                }
+
                 memcpy(numberData, number.bits_.data(), sizeof(T) * number.bits_.size());
 
                 T* sData(nullptr);
                 gpuErrchk(cudaMalloc(&sData, sizeof(T) * s.bits_.size()));
-                assert(sData);
+                
+                if (!sData)
+                {
+                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    return -1;
+                }
+
                 memcpy(sData, s.bits_.data(), sizeof(T) * s.bits_.size());
                 
                 T* RData(nullptr);
                 gpuErrchk(cudaMalloc(&RData, sizeof(T) * R.bits_.size()));
-                assert(RData);
+                
+                if (!RData)
+                {
+                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    return -1;
+                }
+
                 memcpy(RData, R.bits_.data(), sizeof(T) * R.bits_.size());
 
                 T* m_Data(nullptr);
                 gpuErrchk(cudaMalloc(&m_Data, sizeof(T) * m_.bits_.size()));
-                assert(m_Data);
+                
+                if (!m_Data)
+                {
+                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    return -1;
+                }
+
                 memcpy(m_Data, m_.bits_.data(), sizeof(T) * m_.bits_.size());
 
                 T* R2modmData(nullptr);
                 gpuErrchk(cudaMalloc(&R2modmData, sizeof(T) * R2modm.bits_.size()));
-                assert(R2modmData);
+                
+                if (!R2modmData)
+                {
+                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    return -1;
+                }
+
                 memcpy(R2modmData, R2modm.bits_.data(), sizeof(T) * R2modm.bits_.size());
 
                 size_t const blockSize{BLOCK_SIZE};

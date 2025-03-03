@@ -20,11 +20,11 @@ int main()
     int* prime(nullptr);
     gpuErrchk(cudaMalloc(&prime, sizeof(int)));
     assert(prime);
-
-    gpuErrchk(cudaDeviceSetLimit(cudaLimitStackSize, 256 * 256));
-
-    gpuErrchk(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024 * 1024));
     
+    //gpuErrchk(cudaDeviceSetLimit(cudaLimitStackSize, 256 * 256));
+    
+    gpuErrchk(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024 * 1024));
+
     using T = uintmax_t;
     
     {
@@ -41,7 +41,7 @@ int main()
         gpuErrchk(cudaMalloc(&nData, sizeof(T) * n.bits().size()));
         assert(nData);
         gpuErrchk(cudaMemcpy(nData, n.bits().data(), sizeof(T) * n.bits().size(), cudaMemcpyHostToDevice));
-        
+
         t = std::chrono::steady_clock::now();
         isPrime<T><<<1, 1>>>(nData, n.bits().size(), p, primes.size(), prime);
 
@@ -56,6 +56,8 @@ int main()
 
         gpuErrchk(cudaFree(nData));
     }
+
+    return 0;
 
     {
         std::cout << "Block #2" << std::endl;
