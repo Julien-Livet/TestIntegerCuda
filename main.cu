@@ -21,7 +21,7 @@ int main()
     gpuErrchk(cudaMalloc(&prime, sizeof(int)));
     assert(prime);
     
-    //gpuErrchk(cudaDeviceSetLimit(cudaLimitStackSize, 256 * 256));
+    gpuErrchk(cudaDeviceSetLimit(cudaLimitStackSize, 256 * 256));
     
     gpuErrchk(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024 * 1024));
 
