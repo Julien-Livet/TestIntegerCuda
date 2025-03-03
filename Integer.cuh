@@ -2494,9 +2494,9 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             if (!bits_.size())
                 return;
             
-            auto it{cu::begin(bits_)};
+            auto it(cu::begin(bits_));
             
-            while (!*it && it != cu::end(bits_))
+            while (it != cu::end(bits_) && !*it)
                 ++it;
             
             if (it == cu::end(bits_))
