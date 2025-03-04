@@ -44,6 +44,7 @@
 using longest_type = uintmax_t;
 
 //#include "primes_3_000_000.h"
+//#include "primes_100_000.h"
 #include "primes_100.h"
 
 #define BLOCK_SIZE 512
@@ -2852,36 +2853,51 @@ CONSTEXPR inline std::ostream& operator<<(std::ostream& os, Integer<T> const& n)
     else
         return os << n.toString(10, showBase);
 }
-
 template <typename T>
 __device__ __host__ 
 CONSTEXPR inline Integer<T> gcd(Integer<T> const& a, Integer<T> const& b)
 {
-    if (a.isNan() || b.isNan() || a.isInfinity() || b.isInfinity())
+    auto x(a);
+    auto y(b);
+
+    if (x.isNan() || y.isNan() || x.isInfinity() || y.isInfinity())
     {
         Integer<T> n;
         n.setNan();
 
         return n;
     }
-    else if (a < 0)
-        return gcd(a.abs(), b);
-    else if (b < 0)
-        return gcd(a, b.abs());
-    else if (a < b)
-        return gcd(b, a);
-    else if (!a)
-        return b;
-    else if (!b)
-        return a;
-    else if (a.isEven() && b.isEven())
-        return 2 * gcd(a >> 1, b >> 1);
-    else if (a.isOdd() && b.isEven())
-        return gcd(a, b >> 1);
-    else if (a.isEven() && b.isOdd())
-        return gcd(a >> 1, b);
-    else //if (a.isOdd() && b.isOdd())
-        return gcd((a - b) >> 1, b);
+
+    if (x < 0)
+        x = x.abs();
+    if (y < 0)
+        y = y.abs();
+
+    while (x && y)
+    {
+        if (x < y)
+            cu::swap(x, y);
+
+        if (!x)
+            return y;
+        if (!y)
+            return x;
+
+        if (x.isEven() && y.isEven())
+        {
+            x >>= 1;
+            y >>= 1;
+            x *= 2;
+        }
+        else if (x.isOdd() && y.isEven())
+            y >>= 1;
+        else if (x.isEven() && y.isOdd())
+            x >>= 1;
+        else //if (x.isOdd() && y.isOdd())
+            x = (x - y) >> 1;
+    }
+
+    return !x ? y : x;
 }
 
 template <typename T, typename S>
