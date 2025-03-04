@@ -6,7 +6,9 @@ namespace cu
     template <typename T>
     struct less
     {
-        __device__ __host__ constexpr less() = default;
+        __device__ __host__ constexpr less()
+        {
+        }
 
         __device__ __host__ constexpr bool operator()(const T& lhs, const T& rhs) const 
         {

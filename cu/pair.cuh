@@ -14,13 +14,17 @@ namespace cu
         T1 first;
         T2 second;
 
-        __device__ __host__ pair() = default;
+        __device__ __host__ pair()
+        {
+        }
 
         __device__ __host__ pair(T1 const& x, T2 const& y) : first(x), second(y)
         {
         }
 
-        __device__ __host__ ~pair() = default;
+        __device__ __host__ ~pair()
+        {
+        }
     };
 }
 

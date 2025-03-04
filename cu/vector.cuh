@@ -427,10 +427,15 @@ namespace cu
                     T* ptr_;    
             };
 
-            __device__ __host__ vector() = default;
+            __device__ __host__ vector()
+            {
+            }
 
             __device__ __host__ vector(size_t count, T const& value = T()) : size_{count}, capacity_{count}
             {
+                if (capacity_ > 10)
+                    printf("vector %lu\n", capacity_);
+
                 if (count)
                 {
 #ifdef __CUDA_ARCH__
@@ -438,7 +443,12 @@ namespace cu
 #else
                     data_ = new T[count];
 #endif
-                    assert(data_);
+
+                    if (!data_)
+                    {
+                        printf("Failure at %s %d", __FILE__, __LINE__);
+                        return;
+                    }
                 }
 
                 for (size_t i{0}; i < size_; ++i)
@@ -477,7 +487,7 @@ namespace cu
             __device__ __host__ vector& operator=(vector const& other)
             {
                 resize(other.size());
-
+                
                 for (size_t i{0}; i < other.size(); ++i)
                     this->operator[](i) = other[i];
 
@@ -489,11 +499,16 @@ namespace cu
                 if (capacity <= capacity_)
                     return;
 
-                T* d{nullptr};
+                T* d(nullptr);
 
 #ifdef __CUDA_ARCH__
                 gpuErrchk(cudaMalloc(&d, sizeof(T) * capacity));
-                assert(d);
+
+                if (!d)
+                {
+                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    return;
+                }
 
                 for (size_t i{0}; i < size_; ++i)
                     d[i] = data_[i];
@@ -502,7 +517,11 @@ namespace cu
 #else
                 d = new T[capacity];
 
-                assert(d);
+                if (!d)
+                {
+                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    return;
+                }
 
                 for (size_t i{0}; i < size_; ++i)
                     d[i] = data_[i];
@@ -540,14 +559,14 @@ namespace cu
 
             __device__ __host__ T const& operator[](size_t i) const
             {
-                assert(i < size_);
+                assert(data_ && i < size_);
 
                 return data_[i];
             }
 
             __device__ __host__ T& operator[](size_t i)
             {
-                assert(i < size_);
+                assert(data_ && i < size_);
 
                 return data_[i];
             }
