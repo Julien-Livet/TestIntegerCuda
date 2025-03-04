@@ -228,7 +228,7 @@ __global__ void Integer_isPrime_millerRabin(T const* numberData, size_t numberDa
         Integer<T> const R2modm(R2modmData, R2modmData + R2modmDataSize);
 
         Integer<T> temp(sData, sData + sDataSize);
-        auto mod{modulo(a, temp, n, R, m_, R2modm)};
+        auto mod(modulo(a, temp, n, R, m_, R2modm));
 
         while (temp != number && !mod && mod != number)
         {
@@ -245,7 +245,9 @@ template <typename T>
 class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_same<T, typename cu::vector<T>::value_type>::value >::type>
 {
     public:
-        __device__ __host__ CONSTEXPR Integer() = default;
+        __device__ __host__ CONSTEXPR Integer()
+        {   
+        }
 
         template <typename S, std::enable_if_t<std::is_standard_layout_v<S> && std::is_trivial_v<S> >* = nullptr>
         __device__ __host__ CONSTEXPR Integer(S n)
@@ -492,7 +494,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         }
 
         template <typename S>
-        __host__ CONSTEXPR Integer(Integer<S> const& other)
+        __device__ __host__ CONSTEXPR Integer(Integer<S> const& other)
         {
             bits_ = cu::vector<T>(other.dataSize() / sizeof(T) + (other.dataSize() % sizeof(T) ? 1 : 0), 0);
             cu::copy(other.data(), other.data() + other.dataSize(), reinterpret_cast<char*>(bits_.begin()) + bits_.size() * sizeof(T) - other.dataSize());
@@ -1760,13 +1762,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
 #ifdef __CUDA_ARCH__
             Integer_setRandom<T><<<gridSize, blockSize>>>(a, bits_.size(), curand(&state));
-#else
-            Integer_setRandom<T><<<gridSize, blockSize>>>(a, bits_.size(), g());
-#endif
-
-#ifdef __CUDA_ARCH__
+            
             memcpy(bits_.data(), a, sizeof(T) * bits_.size());
 #else
+            Integer_setRandom<T><<<gridSize, blockSize>>>(a, bits_.size(), g());
+            
             gpuErrchk(cudaPeekAtLastError());
             gpuErrchk(cudaDeviceSynchronize());
 
@@ -2853,6 +2853,7 @@ CONSTEXPR inline std::ostream& operator<<(std::ostream& os, Integer<T> const& n)
     else
         return os << n.toString(10, showBase);
 }
+
 template <typename T>
 __device__ __host__ 
 CONSTEXPR inline Integer<T> gcd(Integer<T> const& a, Integer<T> const& b)
@@ -3742,8 +3743,7 @@ computeQuotientBurnikelZiegler(Integer<T> dividend,
     else if (divisor.abs() > dividend.abs())
         return Integer<T>{0};
 
-    cu::pair<Integer<T>, Integer<T> > qr;
-    qr = computeQrBurnikelZiegler(dividend, divisor);
+    auto qr{computeQrBurnikelZiegler(dividend, divisor)};
 
     if (dividend < 0 && divisor < 0)
     {
@@ -3809,14 +3809,14 @@ void inner1(cu::vector<Integer<T> >& a_digits, Integer<T> const& x,
 template <typename T>
 __device__ __host__
 cu::vector<Integer<T> > _int2digits(Integer<T> const& a,
-                                             Integer<T> const& n)
+                                    Integer<T> const& n)
 {
     assert(a >= 0);
 
     if (!a)
         return cu::vector<Integer<T> >{Integer<T>(0)};
 
-    cu::vector<Integer<T> > a_digits(((a.number() + n - 1).template cast<longest_type>() / n).template cast<longest_type>(), Integer<T>(0));
+    cu::vector<Integer<T> > a_digits(((a.number() + n - 1) / n).template cast<longest_type>(), Integer<T>(0));
 
     if (a)
         inner1(a_digits, a, Integer<T>(0), Integer<T>(a_digits.size()), n);
@@ -4095,7 +4095,7 @@ __host__ inline Integer<longest_type> operator""_z(char const* str)
 template <typename T>
 __device__ __host__ 
 CONSTEXPR inline Integer<T> const& min(Integer<T> const& a,
-                                               Integer<T> const& b)
+                                       Integer<T> const& b)
 {
     return a < b ? a : b;
 }
@@ -4103,7 +4103,7 @@ CONSTEXPR inline Integer<T> const& min(Integer<T> const& a,
 template <typename T>
 __device__ __host__ 
 CONSTEXPR inline Integer<T> const& max(Integer<T> const& a,
-                                               Integer<T> const& b)
+                                       Integer<T> const& b)
 {
     return a > b ? a : b;
 }
