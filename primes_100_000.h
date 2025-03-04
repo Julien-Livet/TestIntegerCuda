@@ -1,4 +1,4 @@
-constexpr std::array<unsigned int, 100'000> const primes = {,
+constexpr std::array<unsigned int, 100'000> const primes = {
 3,
 5,
 7,
