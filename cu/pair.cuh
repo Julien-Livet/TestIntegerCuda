@@ -22,8 +22,18 @@ namespace cu
         {
         }
 
+        __device__ __host__ pair(pair const& other) : first(other.first), second(other.second)
+        {
+        }
+
         __device__ __host__ ~pair()
         {
+        }
+
+        __device__ __host__ pair& operator=(pair const& other)
+        {
+            first = other.first;
+            second = other.second;
         }
     };
 }

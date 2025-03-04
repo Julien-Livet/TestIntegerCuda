@@ -10,6 +10,10 @@ namespace cu
         {
         }
 
+        __device__ __host__ constexpr ~less()
+        {
+        }
+
         __device__ __host__ constexpr bool operator()(const T& lhs, const T& rhs) const 
         {
             return lhs < rhs; // assumes that the implementation handles pointer total order

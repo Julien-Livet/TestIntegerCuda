@@ -433,9 +433,6 @@ namespace cu
 
             __device__ __host__ vector(size_t count, T const& value = T()) : size_{count}, capacity_{count}
             {
-                if (capacity_ > 10)
-                    printf("vector %lu\n", capacity_);
-
                 if (count)
                 {
 #ifdef __CUDA_ARCH__
@@ -449,6 +446,10 @@ namespace cu
                         printf("Failure at %s %d", __FILE__, __LINE__);
                         return;
                     }
+
+#ifdef __CUDA_ARCH__
+                    memset(data_, 0, sizeof(T) * count);
+#endif
                 }
 
                 for (size_t i{0}; i < size_; ++i)
@@ -510,6 +511,8 @@ namespace cu
                     return;
                 }
 
+                memset(d, 0, sizeof(T) * capacity);
+
                 for (size_t i{0}; i < size_; ++i)
                     d[i] = data_[i];
 
@@ -530,7 +533,7 @@ namespace cu
 #endif
 
                 capacity_ = capacity;
-
+                
                 data_ = d;
             }
 
@@ -573,7 +576,7 @@ namespace cu
 
             __device__ __host__ T const& at(size_t i) const
             {
-                if (i >= size_)
+                if (!data_ || i >= size_)
                     throw std::out_of_range("Index out of range");
 
                 return data_[i];
@@ -581,7 +584,7 @@ namespace cu
 
             __device__ __host__ T& at(size_t i)
             {
-                if (i >= size_)
+                if (!data_ || i >= size_)
                     throw std::out_of_range("Index out of range");
 
                 return data_[i];
