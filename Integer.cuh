@@ -43,9 +43,7 @@
 
 using longest_type = uintmax_t;
 
-//#include "primes_3_000_000.h"
-//#include "primes_100_000.h"
-#include "primes_100.h"
+#include "primes_3_000_000.h"
 
 #define BLOCK_SIZE 512
 
@@ -911,7 +909,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                     }
                     else
                     {
-                        auto const qr{computeQrBurnikelZiegler(*this, other)};
+                        auto const qr(computeQrBurnikelZiegler(*this, other));
 
                         assert(*this == qr.first * rhs + qr.second);
 
@@ -920,7 +918,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 }
                 else
                 {
-                    auto const qr{computeQrBurnikelZiegler(*this, other)};
+                    auto const qr(computeQrBurnikelZiegler(*this, other));
                     
                     assert(*this == qr.first * rhs + qr.second);
 
@@ -1355,6 +1353,17 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
             if (autoAdjust_)
                 adjust();
+
+            return *this;
+        }
+
+        __device__ __host__ CONSTEXPR Integer& operator=(Integer const& other)
+        {
+            isPositive_ = other.isPositive_;
+            bits_ = other.bits_;
+            isNan_ = other.isNan_;
+            isInfinity_ = other.isInfinity_;
+            autoAdjust_ = other.autoAdjust_;
 
             return *this;
         }
@@ -3145,7 +3154,7 @@ computeQr(Integer<T> const& dividend, Integer<T> const& divisor)
         return {n, n};
     }
     else if (!dividend)
-        return {Integer<T>{0}, Integer<T>{0}};
+        return {Integer<T>(0), Integer<T>(0)};
     else if (dividend.isNan())
         return {dividend, dividend};
     else if (divisor.isNan())
@@ -3158,7 +3167,7 @@ computeQr(Integer<T> const& dividend, Integer<T> const& divisor)
         return {n, n};
     }
     else if (divisor.abs() > dividend.abs())
-        return {Integer<T>{0}, dividend};
+        return {Integer<T>(0), dividend};
     else if (dividend < 0 && divisor < 0)
     {
         auto qr{computeQr(-dividend, -divisor)};
@@ -3259,7 +3268,7 @@ computeQuotient(Integer<T> const& dividend,
         return n;
     }
     else if (!dividend)
-        return Integer<T>{0};
+        return Integer<T>(0);
     else if (dividend.isNan())
         return dividend;
     else if (divisor.isNan())
@@ -3272,7 +3281,7 @@ computeQuotient(Integer<T> const& dividend,
         return n;
     }
     else if (divisor.abs() > dividend.abs())
-        return Integer<T>{0};
+        return Integer<T>(0);
     else if (dividend < 0 && divisor < 0)
         return computeQuotient(-dividend, -divisor);
     else if (dividend > 0 && divisor < 0)
@@ -3599,7 +3608,7 @@ computeQuotientBinary(Integer<T> dividend, Integer<T> const& divisor)
         return n;
     }
     else if (!dividend)
-        return Integer<T>{0};
+        return Integer<T>(0);
     else if (dividend.isNan())
         return dividend;
     else if (divisor.isNan())
@@ -3612,7 +3621,7 @@ computeQuotientBinary(Integer<T> dividend, Integer<T> const& divisor)
         return n;
     }
     else if (divisor.abs() > dividend.abs())
-        return Integer<T>{0};
+        return Integer<T>(0);
     else if (dividend < 0 && divisor > 0)
         return -computeQuotientBinary(-dividend, divisor);
     else if (dividend > 0 && divisor < 0)
@@ -3728,7 +3737,7 @@ computeQuotientBurnikelZiegler(Integer<T> dividend,
         return n;
     }
     else if (!dividend)
-        return Integer<T>{0};
+        return Integer<T>(0);
     else if (dividend.isNan())
         return dividend;
     else if (divisor.isNan())
@@ -3741,9 +3750,9 @@ computeQuotientBurnikelZiegler(Integer<T> dividend,
         return n;
     }
     else if (divisor.abs() > dividend.abs())
-        return Integer<T>{0};
+        return Integer<T>(0);
 
-    auto qr{computeQrBurnikelZiegler(dividend, divisor)};
+    auto qr(computeQrBurnikelZiegler(dividend, divisor));
 
     if (dividend < 0 && divisor < 0)
     {
@@ -3951,7 +3960,7 @@ computeQrBurnikelZiegler(Integer<T> const& dividend,
         return {n, n};
     }
     else if (!dividend)
-        return {Integer<T>{0}, Integer<T>{0}};
+        return {Integer<T>(0), Integer<T>(0)};
     else if (dividend.isNan())
         return {dividend, dividend};
     else if (divisor.isNan())
@@ -3969,7 +3978,7 @@ computeQrBurnikelZiegler(Integer<T> const& dividend,
         return {divisor.sign() * dividend, Integer<T>(0)};
     else if (dividend < 0 && divisor < 0)
     {
-        auto qr{computeQrBurnikelZiegler(-dividend, -divisor)};
+        auto qr(computeQrBurnikelZiegler(-dividend, -divisor));
 
         if (qr.second)
         {
@@ -3981,7 +3990,7 @@ computeQrBurnikelZiegler(Integer<T> const& dividend,
     }
     else if (dividend > 0 && divisor < 0)
     {
-        auto qr{computeQrBurnikelZiegler(dividend, -divisor)};
+        auto qr(computeQrBurnikelZiegler(dividend, -divisor));
 
         qr.first = -qr.first;
 
@@ -3995,7 +4004,7 @@ computeQrBurnikelZiegler(Integer<T> const& dividend,
     }
     else if (dividend < 0 && divisor > 0)
     {
-        auto qr{computeQrBurnikelZiegler(-dividend, divisor)};
+        auto qr(computeQrBurnikelZiegler(-dividend, divisor));
 
         qr.first = -qr.first;
 
@@ -4008,7 +4017,7 @@ computeQrBurnikelZiegler(Integer<T> const& dividend,
         return qr;
     }
 
-    auto const n{divisor.number()};
+    auto const n(divisor.number());
     auto const a_digits(_int2digits(dividend, n));
 
     Integer<T> r(0);
