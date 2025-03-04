@@ -21,7 +21,7 @@ int main()
     gpuErrchk(cudaMalloc(&prime, sizeof(int)));
     assert(prime);
     
-    gpuErrchk(cudaDeviceSetLimit(cudaLimitStackSize, 256 * 256));
+    gpuErrchk(cudaDeviceSetLimit(cudaLimitStackSize, 256 * 128));
     
     gpuErrchk(cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024 * 1024));
 
@@ -57,8 +57,6 @@ int main()
         gpuErrchk(cudaFree(nData));
     }
 
-    return 0;
-
     {
         std::cout << "Block #2" << std::endl;
         gpuErrchk(cudaMemset(prime, -1, sizeof(int)));
@@ -87,6 +85,8 @@ int main()
 
         gpuErrchk(cudaFree(nData));
     }
+
+    return 0;
 
     {
         std::cout << "Block #3" << std::endl;

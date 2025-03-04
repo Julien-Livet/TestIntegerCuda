@@ -46,7 +46,7 @@ using longest_type = uintmax_t;
 //#include "primes_3_000_000.h"
 #include "primes_100.h"
 
-#define BLOCK_SIZE 1024
+#define BLOCK_SIZE 512
 
 template <typename T>
 __global__ void Integer_invert(T* a, size_t n)                  \
