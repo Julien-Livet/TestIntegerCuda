@@ -9,7 +9,7 @@
 #include "iterator.cuh"
 
 __device__ __host__ inline void gpuAssert(cudaError_t code, const char *file,
-                                          int line, bool abort = false)
+                                          int line, bool abort = true)
 {
     if (code != cudaSuccess) 
     {
@@ -437,23 +437,28 @@ namespace cu
                 {
 #ifdef __CUDA_ARCH__
                     gpuErrchk(cudaMalloc(&data_, sizeof(T) * count));
-#else
-                    data_ = new T[count];
-#endif
 
                     if (!data_)
                     {
-                        printf("Failure at %s %d", __FILE__, __LINE__);
+                        printf("Failure at %s %d\n", __FILE__, __LINE__);
                         return;
                     }
 
-#ifdef __CUDA_ARCH__
-                    memset(data_, 0, sizeof(T) * count);
+                    for (size_t i{0}; i < size_; ++i)
+                        new (&data_[i]) T(value);
+#else
+                    data_ = new T[count];
+
+                    if (!data_)
+                    {
+                        printf("Failure at %s %d\n", __FILE__, __LINE__);
+                        return;
+                    }
+
+                    for (size_t i{0}; i < size_; ++i)
+                        this->operator[](i) = value;
 #endif
                 }
-
-                for (size_t i{0}; i < size_; ++i)
-                    this->operator[](i) = value;
             }
 
             template <class InputIt>
@@ -507,14 +512,15 @@ namespace cu
 
                 if (!d)
                 {
-                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    printf("Failure at %s %d\n", __FILE__, __LINE__);
                     return;
                 }
 
-                memset(d, 0, sizeof(T) * capacity);
-
                 for (size_t i{0}; i < size_; ++i)
-                    d[i] = data_[i];
+                    new (&d[i]) T(data_[i]);
+
+                for (size_t i{size_}; i < capacity; ++i)
+                    new (&d[i]) T();
 
                 gpuErrchk(cudaFree(data_));
 #else
@@ -522,7 +528,7 @@ namespace cu
 
                 if (!d)
                 {
-                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    printf("Failure at %s %d\n", __FILE__, __LINE__);
                     return;
                 }
 
@@ -533,7 +539,6 @@ namespace cu
 #endif
 
                 capacity_ = capacity;
-                
                 data_ = d;
             }
 
@@ -635,8 +640,8 @@ namespace cu
             template <class InputIt>
             __device__ __host__ void insert(const_iterator pos, InputIt first, InputIt last)
             {
-                auto const i{cu::distance(cbegin(), pos)};
-                auto const n{cu::distance(first, last)};
+                auto const i(cu::distance(cbegin(), pos));
+                auto const n(cu::distance(first, last));
 
                 resize(size_ + n);
 

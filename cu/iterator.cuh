@@ -68,12 +68,15 @@ namespace cu
                 --dist;
                 ++it;
             }
+
             if constexpr (std::is_base_of_v<std::bidirectional_iterator_tag, category>)
+            {
                 while (dist < 0)
                 {
                     ++dist;
                     --it;
                 }
+            }
         }
     }
 }
