@@ -264,7 +264,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 bits_.push_back(n);
             else
             {
-                auto const shift{longest_type{1} << cu::min(sizeof(T), sizeof(S)) * 8};
+                auto const shift(longest_type{1} << cu::min(sizeof(T), sizeof(S)) * 8);
                 
                 for (size_t i{0}; i < bits_.capacity(); ++i)
                 {
@@ -314,7 +314,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             n.erase(std::remove_if(n.begin(), n.end(), isspace), n.end());
             n.erase(std::remove(n.begin(), n.end(), '\''), n.end());
             
-            auto it{n.begin()};
+            auto it(n.begin());
             
             if (*it == '-')
             {
@@ -324,7 +324,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             
             if (!base)
             {
-                auto s{std::string{it, n.end()}.substr(0, 2)};
+                auto s(std::string{it, n.end()}.substr(0, 2));
                 std::transform(s.begin(), s.end(), s.begin(),
                                [] (unsigned char c) { return std::tolower(c); });
 
@@ -350,7 +350,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 setInfinity();
             else
             {
-                auto const isPositive{isPositive_};
+                auto const isPositive(isPositive_);
 
                 if (base == 2)
                 {
@@ -381,7 +381,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                     else if (str.substr(0, 2) == "0o")
                         it += 2;
 
-                    auto otherIt{n.rbegin()};
+                    auto otherIt(n.rbegin());
                     Integer p(1);
 
                     while (otherIt.base() != it)
@@ -397,7 +397,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 }
                 else if (base <= 10)
                 {
-                    auto otherIt{n.rbegin()};
+                    auto otherIt(n.rbegin());
                     Integer p(1);
                     
                     while (otherIt.base() != it)
@@ -413,7 +413,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 }
                 else if (base < 16)
                 {
-                    auto otherIt{n.rbegin()};
+                    auto otherIt(n.rbegin());
                     Integer p(1);
 
                     while (otherIt.base() != it)
@@ -439,7 +439,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                     else if (str.substr(0, 2) == "0x")
                         it += 2;
 
-                    auto otherIt{n.rbegin()};
+                    auto otherIt(n.rbegin());
                     Integer p(1);
 
                     while (otherIt.base() != it)
@@ -460,7 +460,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 }
                 else// if (base <= 62)
                 {
-                    auto otherIt{n.rbegin()};
+                    auto otherIt(n.rbegin());
                     Integer p(1);
 
                     while (otherIt.base() != it)
@@ -520,7 +520,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             
             if (!a)
             {
-                printf("Failure at %s %d", __FILE__, __LINE__);
+                printf("Failure at %s %d\n", __FILE__, __LINE__);
                 return;
             }
 
@@ -728,15 +728,15 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                     T carry{0};
                     auto const& a(bits_);
                     auto const& b(other.bits_);
-                    size_t const n{cu::max(a.size(), b.size())};
+                    size_t const n(cu::max(a.size(), b.size()));
                     cu::vector<T> result;
                     result.reserve(n);
 
                     for (size_t i{0}; i < n; ++i)
                     {
-                        auto const bit_a{(i < a.size()) ? a[a.size() - 1 - i] : T{0}};
-                        auto const bit_b{(i < b.size()) ? b[b.size() - 1 - i] : T{0}};
-                        auto const sum{static_cast<T>(bit_a + bit_b + carry)};
+                        auto const bit_a((i < a.size()) ? a[a.size() - 1 - i] : T{0});
+                        auto const bit_b((i < b.size()) ? b[b.size() - 1 - i] : T{0});
+                        auto const sum(static_cast<T>(bit_a + bit_b + carry));
 
                         carry = (sum < bit_a || sum < bit_b);
 
@@ -775,23 +775,23 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
                     auto const& a(bits_);
                     auto const& b(otherBits);
-                    size_t const n{cu::max(a.size(), b.size())};
+                    size_t const n(cu::max(a.size(), b.size()));
                     cu::vector<T> result;
                     result.reserve(n);
 
                     for (size_t i{n - 1}; i <= n - 1; --i)
                     {
-                        auto const ia{a.size() - 1 - i};
-                        auto const ib{b.size() - 1 - i};
+                        auto const ia(a.size() - 1 - i);
+                        auto const ib(b.size() - 1 - i);
 
-                        auto const bit_a{ia < a.size() ? a[ia] : T{0}};
-                        auto const bit_b{ib < b.size() ? b[ib] : T{0}};
+                        auto const bit_a(ia < a.size() ? a[ia] : T{0});
+                        auto const bit_b(ib < b.size() ? b[ib] : T{0});
 
-                        auto bit_result{static_cast<T>(bit_a - bit_b)};
+                        auto bit_result(static_cast<T>(bit_a - bit_b));
 
                         if (bit_a < bit_b)
                         {
-                            for (auto it{result.rbegin()}; it != result.rend(); ++it)
+                            for (auto it(result.rbegin()); it != result.rend(); ++it)
                             {
                                 bool const stop{*it > 0};
 
@@ -944,7 +944,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return *this;
             }
 
-            auto const s{static_cast<unsigned short>(sizeof(T) * 8)};
+            auto const s(static_cast<unsigned short>(sizeof(T) * 8));
             auto const n(other / s);
 
             cu::vector<T> const v(n.template cast<longest_type>(), T{0});
@@ -959,11 +959,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
             bits_ = bits;
 
-            auto const shift{other.template cast<longest_type>()};
+            auto const shift(other.template cast<longest_type>());
 
             if (shift)
             {
-                for (auto it{cu::begin(bits_) + 1}; it != cu::end(bits_); ++it)
+                for (auto it(cu::begin(bits_) + 1); it != cu::end(bits_); ++it)
                 {
                     longest_type const s{sizeof(T) * 8};
                     
@@ -1002,7 +1002,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return *this;
             }
 
-            auto const s{static_cast<unsigned short>(sizeof(T) * 8)};
+            auto const s(static_cast<unsigned short>(sizeof(T) * 8));
             auto const n(other / s);
 
             if (bits_.size() < n.template cast<longest_type>())
@@ -1016,11 +1016,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
             other -= n * s;
 
-            auto const shift{other.template cast<longest_type>()};
+            auto const shift(other.template cast<longest_type>());
 
             if (shift)
             {
-                for (auto it{bits_.rbegin()}; it != bits_.rend(); ++it)
+                for (auto it(bits_.rbegin()); it != bits_.rend(); ++it)
                 {
                     *it >>= shift;
 
@@ -1065,7 +1065,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             cu::copy(bits_.rbegin(), bits_.rend(), a.rbegin());
             cu::copy(other.bits_.rbegin(), other.bits_.rend(), b.rbegin());
 
-            auto const great{a > b};
+            auto const great(a > b);
 
             return isPositive_ ? great : !great;
         }
@@ -1100,7 +1100,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             cu::copy(bits_.rbegin(), bits_.rend(), a.rbegin());
             cu::copy(other.bits_.rbegin(), other.bits_.rend(), b.rbegin());
 
-            auto const less{a < b};
+            auto const less(a < b);
 
             return isPositive_ ? less : !less;
         }
@@ -1138,8 +1138,8 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
             bool zero{true};
 
-            auto it1{bits_.rbegin()};
-            auto it2{other.bits_.rbegin()};
+            auto it1(bits_.rbegin());
+            auto it2(other.bits_.rbegin());
 
             for (size_t i{0}; i < cu::min(bits_.size(), other.bits_.size()); ++i)
             {
@@ -1432,9 +1432,9 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                         break;
                 }
 #else
-                for (auto it{bits_.rbegin()}; it != bits_.rend(); ++it)
+                for (auto it(bits_.rbegin()); it != bits_.rend(); ++it)
                 {
-                    auto b{*it};
+                    auto b(*it);
 
                     for (size_t i{0}; i < sizeof(T) * 8; ++i)
                     {
@@ -1483,7 +1483,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                     if (!number)
                         s = "0";
 
-                    auto const n{static_cast<T>(std::log10(static_cast<T>(~T{0})))};
+                    auto const n(static_cast<T>(std::log10(static_cast<T>(~T{0}))));
                     T const b(pow(T{10}, n));
 
                     while (number)
@@ -1630,7 +1630,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             S n{0};
 
             size_t const iMax{cu::min(cu::max(longest_type{1}, longest_type{sizeof(S) / sizeof(T)}), longest_type{bits_.size()})};
-            auto it{bits_.rbegin() + iMax - 1};
+            auto it(bits_.rbegin() + iMax - 1);
 
             for (size_t i{0}; i < iMax; ++i)
             {
@@ -1756,7 +1756,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
             if (!a)
             {
-                printf("Failure at %s %d", __FILE__, __LINE__);
+                printf("Failure at %s %d\n", __FILE__, __LINE__);
                 return;
             }
 
@@ -1800,7 +1800,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return 0;
             else if (this->template fits<unsigned int>())
             {
-                auto p{cu::equal_range(primes, primes + primesSize, this->template cast<unsigned int>())};
+                auto p(cu::equal_range(primes, primes + primesSize, this->template cast<unsigned int>()));
                 
                 if (p.first != primes + primesSize && *p.first != this->template cast<unsigned int>())
                     --p.first;
@@ -1902,7 +1902,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 
                 if (!divisible)
                 {
-                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    printf("Failure at %s %d\n", __FILE__, __LINE__);
                     return -1;
                 }
 
@@ -1913,7 +1913,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 
                 if (!numberData)
                 {
-                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    printf("Failure at %s %d\n", __FILE__, __LINE__);
                     return -1;
                 }
 
@@ -1924,7 +1924,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 
                 if (!sData)
                 {
-                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    printf("Failure at %s %d\n", __FILE__, __LINE__);
                     return -1;
                 }
 
@@ -1935,7 +1935,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 
                 if (!RData)
                 {
-                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    printf("Failure at %s %d\n", __FILE__, __LINE__);
                     return -1;
                 }
 
@@ -1946,7 +1946,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 
                 if (!m_Data)
                 {
-                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    printf("Failure at %s %d\n", __FILE__, __LINE__);
                     return -1;
                 }
 
@@ -1957,7 +1957,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 
                 if (!R2modmData)
                 {
-                    printf("Failure at %s %d", __FILE__, __LINE__);
+                    printf("Failure at %s %d\n", __FILE__, __LINE__);
                     return -1;
                 }
 
@@ -2011,7 +2011,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return 0;
             else if (this->template fits<unsigned int>())
             {
-                auto p{std::equal_range(primes.begin(), primes.end(), this->template cast<unsigned int>())};
+                auto p(std::equal_range(primes.begin(), primes.end(), this->template cast<unsigned int>()));
                 
                 if (p.first != primes.end() && *p.first != this->template cast<unsigned int>())
                     --p.first;
@@ -2131,8 +2131,8 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                             a %= number;
                             ++a;
 
-                            auto temp{s};
-                            auto mod{modulo(a, temp, *this, R, m_, R2modm)};
+                            auto temp(s);
+                            auto mod(modulo(a, temp, *this, R, m_, R2modm));
 
                             while (temp != number && !mod && mod != number)
                             {
@@ -2198,7 +2198,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
         __device__ __host__ CONSTEXPR bool bit(size_t n) const noexcept
         {
-            auto it{bits_.rbegin()};
+            auto it(bits_.rbegin());
 
             while (it != bits_.rend() && n > sizeof(T) * 8)
             {
@@ -2214,7 +2214,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
         __device__ __host__ CONSTEXPR void setBit(size_t n, bool bit)
         {
-            auto it{bits_.rbegin()};
+            auto it(bits_.rbegin());
 
             while (n > sizeof(T) * 8)
             {
@@ -2299,14 +2299,14 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             if (isNan() || isInfinity())
                 return number;
 
-            auto it{cu::begin(bits_)};
+            auto it(cu::begin(bits_));
 
             while (!*it && it != cu::end(bits_))
                 ++it;
 
             if (it != cu::end(bits_))
             {
-                auto b{*it};
+                auto b(*it);
 
                 while (b)
                 {
@@ -2369,7 +2369,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return Integer(2);
             else if (this->template fits<unsigned int>())
             {
-                auto p{std::equal_range(primes.begin(), primes.end(), this->template cast<unsigned int>())};
+                auto p(std::equal_range(primes.begin(), primes.end(), this->template cast<unsigned int>()));
                 
                 if (p.first != primes.end() && *p.first != this->template cast<unsigned int>())
                     --p.first;
@@ -2440,7 +2440,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return nan();
             else if (this->template fits<unsigned int>())
             {
-                auto p{std::equal_range(primes.begin(), primes.end(), this->template cast<unsigned int>())};
+                auto p(std::equal_range(primes.begin(), primes.end(), this->template cast<unsigned int>()));
                 
                 if (p.first != primes.end() && *p.first != this->template cast<unsigned int>())
                     --p.first;
@@ -3170,7 +3170,7 @@ computeQr(Integer<T> const& dividend, Integer<T> const& divisor)
         return {Integer<T>(0), dividend};
     else if (dividend < 0 && divisor < 0)
     {
-        auto qr{computeQr(-dividend, -divisor)};
+        auto qr(computeQr(-dividend, -divisor));
 
         if (qr.second)
         {
@@ -3182,7 +3182,7 @@ computeQr(Integer<T> const& dividend, Integer<T> const& divisor)
     }
     else if (dividend > 0 && divisor < 0)
     {
-        auto qr{computeQr(dividend, -divisor)};
+        auto qr(computeQr(dividend, -divisor));
 
         qr.first = -qr.first;
 
@@ -3196,7 +3196,7 @@ computeQr(Integer<T> const& dividend, Integer<T> const& divisor)
     }
     else if (dividend < 0 && divisor > 0)
     {
-        auto qr{computeQr(-dividend, divisor)};
+        auto qr(computeQr(-dividend, divisor));
 
         qr.first = -qr.first;
 
@@ -3917,7 +3917,7 @@ _div3n2n(Integer<T> const& a12, Integer<T> const& a3,
     }
     else
     {
-        auto const p{_div2n1n(a12, b1, n)};
+        auto const p(_div2n1n(a12, b1, n));
         q = p.first;
         r = p.second;
     }
@@ -4024,7 +4024,7 @@ computeQrBurnikelZiegler(Integer<T> const& dividend,
     Integer<T> q(0);
     cu::vector<Integer<T> > q_digits;
 
-    for (auto it{a_digits.rbegin()}; it != a_digits.rend(); ++it)
+    for (auto it(a_digits.rbegin()); it != a_digits.rend(); ++it)
     {
         r <<= n;
         r += *it;
