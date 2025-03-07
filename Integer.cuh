@@ -152,7 +152,7 @@ bool mulmod(Integer<T> const& a, Integer<T> b, Integer<T> const& m)
 
     while (b > 0)
     {
-        if (b & 1)
+        if (b & char(1))
         {
             x += y;
             x %= m;
@@ -179,7 +179,7 @@ Integer<T> modulo(Integer<T> const& base, Integer<T> e,
 
     while (e > 0)
     {
-        if (e & 1)
+        if (e & char(1))
         {
             auto const x_(x);
             x = redmulmod(x, y, m, R, m_, R2modm);
@@ -234,7 +234,7 @@ __global__ void Integer_isPrime_millerRabin(T const* numberData, size_t numberDa
             temp <<= 1;
         }
 
-        if (mod != number && !(temp & 1))
+        if (mod != number && !(temp & char(1)))
             *divisible = true;
     }
 }
@@ -243,7 +243,19 @@ template <typename T>
 class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_same<T, typename cu::vector<T>::value_type>::value >::type>
 {
     public:
+        __device__ __host__ CONSTEXPR ~Integer()
+        {   
+        }
+
         __device__ __host__ CONSTEXPR Integer()
+        {   
+        }
+
+        __device__ __host__ CONSTEXPR Integer(Integer const& other) : isPositive_(other.isPositive_),
+                                                                      bits_(other.bits_),
+                                                                      isNan_(other.isNan_),
+                                                                      isInfinity_(other.isInfinity_),
+                                                                      autoAdjust_(other.autoAdjust_)
         {   
         }
 
@@ -278,18 +290,18 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             adjust();
         }
 
-        __device__ __host__ CONSTEXPR Integer(cu::vector<T> const& bits, bool isPositive = true) : isPositive_{isPositive}, bits_{bits}
+        __device__ __host__ CONSTEXPR Integer(cu::vector<T> const& bits, bool isPositive = true) : isPositive_(isPositive), bits_(bits)
         {
             adjust();
         }
 
         template <size_t N>
-        __device__ __host__ CONSTEXPR Integer(std::bitset<N> const& bits, bool isPositive = true) : isPositive_{isPositive}
+        __device__ __host__ CONSTEXPR Integer(std::bitset<N> const& bits, bool isPositive = true) : isPositive_(isPositive)
         {
             setBits(0, bits);
         }
 
-        __host__ CONSTEXPR Integer(std::initializer_list<T> const& bits, bool isPositive = true) : isPositive_{isPositive}
+        __host__ CONSTEXPR Integer(std::initializer_list<T> const& bits, bool isPositive = true) : isPositive_(isPositive)
         {
             bits_.reserve(bits.size());
 
@@ -300,7 +312,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         }
 
         template <class InputIt>
-        __device__ __host__ CONSTEXPR Integer(InputIt begin, InputIt end, bool isPositive = true) : isPositive_{isPositive}, bits_{begin, end}
+        __device__ __host__ CONSTEXPR Integer(InputIt begin, InputIt end, bool isPositive = true) : isPositive_(isPositive), bits_(begin, end)
         {
             adjust();
         }
@@ -359,7 +371,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                     else if (str.substr(0, 2) == "0b")
                         it += 2;
 
-                    *this = 0;
+                    bits_.clear();
 
                     while (it != n.end())
                     {
@@ -556,7 +568,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             else if (isNan() || other.isNan())
                 setNan();
             else if (!*this || !other)
-                *this = 0;
+                bits_.clear();
             else if (isInfinity() || other.isInfinity())
             {
                 setInfinity();
@@ -613,12 +625,12 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                             *this = z0 + (z1 << m) + (z2 << 2 * m);
                         }
                     }
-                    else if (!(rhs & 1))
+                    else if (!(rhs & char(1)))
                     {
                         auto r(rhs);
                         Integer shift(0);
 
-                        while (!(r & 1))
+                        while (!(r & char(1)))
                         {
                             r >>= 1;
                             ++shift;
@@ -845,21 +857,21 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             if (!other || other.isNan())
                 setNan();
             else if (other.isInfinity())
-                *this = 0;
+                bits_.clear();
             else
             {
                 if (abs() < other.abs())
-                    *this = 0;
+                    bits_.clear();
                 else if (isPositive_ && other.isPositive_)
                 {
                     if (this->template fits<longest_type>() && other.template fits<longest_type>())
                         *this = this->template cast<longest_type>() / other.template cast<longest_type>();
-                    else if (!(rhs & 1))
+                    else if (!(rhs & char(1)))
                     {
                         auto r(rhs);
                         Integer shift(0);
 
-                        while (!(r & 1))
+                        while (!(r & char(1)))
                         {
                             r >>= 1;
                             ++shift;
@@ -876,9 +888,9 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                     *this /= -other;
                     *this = -*this;
                 }
+                
+                assert(abs() <= n.abs());
             }
-
-            assert(abs() <= n.abs());
 
             return *this;
         }
@@ -895,9 +907,9 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 if ((isPositive_ && other.isPositive_) ||
                     (!isPositive_ && !other.isPositive_))
                 {
-                    if (other == 1)
-                        *this = 0;
-                    else if (other == 2)
+                    if (other == char(1))
+                        bits_.clear();
+                    else if (other == char(2))
                         *this &= 1;
                     else if (abs().template fits<longest_type>() && other.abs().template fits<longest_type>())
                     {
@@ -997,7 +1009,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 if (other < 0)
                     setNan();
                 else
-                    *this = 0;
+                    bits_.clear();
                 
                 return *this;
             }
@@ -1162,6 +1174,15 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         template <typename S>
         __device__ __host__ CONSTEXPR bool operator==(S const& other) const
         {
+            if (bits_.empty())
+                return !other;
+                
+            if constexpr (sizeof(S) <= sizeof(T))
+            {
+                if (bits_.size() == 1)
+                    return bits_.back() == other;
+            }
+                            
             return *this == Integer(other);
         }
 
@@ -1173,7 +1194,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         template <typename S>
         __device__ __host__ CONSTEXPR bool operator!=(S const& other) const
         {
-            return *this != Integer(other);
+            return !(*this == other);
         }
 
         __device__ __host__ CONSTEXPR Integer operator-() const
@@ -1322,18 +1343,36 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         template <typename S>
         __device__ __host__ CONSTEXPR Integer& operator|=(S const& other)
         {
+            if constexpr (sizeof(S) <= sizeof(T))
+            {
+                if (bits_.size() == 1)
+                    bits_.back() |= other;
+            }
+
             return *this |= Integer(other);
         }
 
         template <typename S>
         __device__ __host__ CONSTEXPR Integer& operator&=(S const& other)
         {
+            if constexpr (sizeof(S) <= sizeof(T))
+            {
+                if (bits_.size() == 1)
+                    bits_.back() &= other;
+            }
+
             return *this &= Integer(other);
         }
 
         template <typename S>
         __device__ __host__ CONSTEXPR Integer& operator^=(S const& other)
         {
+            if constexpr (sizeof(S) <= sizeof(T))
+            {
+                if (bits_.size() == 1)
+                    bits_.back() ^= other;
+            }
+
             return *this ^= Integer(other);
         }
 
@@ -1438,7 +1477,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
                     for (size_t i{0}; i < sizeof(T) * 8; ++i)
                     {
-                        s = (b & 1 ? '1' : '0') + s;
+                        s = (b & char(1) ? '1' : '0') + s;
                         b >>= 1;
                     }
                 }
@@ -1794,9 +1833,9 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return 0;
             else if (*this < 2)
                 return 0;
-            else if (*this == 2)
+            else if (*this == char(2))
                 return 2;
-            else if(!(*this & 1))
+            else if(!(*this & char(1)))
                 return 0;
             else if (this->template fits<unsigned int>())
             {
@@ -1860,7 +1899,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
             auto s(*this - 1);
 
-            while (!(s & 1))
+            while (!(s & char(1)))
                 s >>= 1;
 
             auto const number(*this - 1);
@@ -1869,17 +1908,17 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
             assert(R > m);
 
-            if (!(m & 1))
+            if (!(m & char(1)))
                 ++R;
 
             while (!m.isCoprime(R))
             {
-                if (!(m & 1))
+                if (!(m & char(1)))
                     --R;
 
                 R <<= 1;
 
-                if (!(m & 1))
+                if (!(m & char(1)))
                     ++R;
             }
 
@@ -2005,9 +2044,9 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return 0;
             else if (*this < 2)
                 return 0;
-            else if (*this == 2)
+            else if (*this == char(2))
                 return 2;
-            else if(!(*this & 1))
+            else if(!(*this & char(1)))
                 return 0;
             else if (this->template fits<unsigned int>())
             {
@@ -2078,7 +2117,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             
             auto s(*this - 1);
             
-            while (!(s & 1))
+            while (!(s & char(1)))
                 s >>= 1;
             
             auto const number(*this - 1);
@@ -2087,17 +2126,17 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             
             assert(R > m);
 
-            if (!(m & 1))
+            if (!(m & char(1)))
                 ++R;
             
             while (!m.isCoprime(R))
             {
-                if (!(m & 1))
+                if (!(m & char(1)))
                     --R;
 
                 R <<= 1;
 
-                if (!(m & 1))
+                if (!(m & char(1)))
                     ++R;
             }
             
@@ -2140,7 +2179,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                 temp <<= 1;
                             }
 
-                            if (mod != number && !(temp & 1))
+                            if (mod != number && !(temp & char(1)))
                             {
                                 divisible.store(true);
                                 return;
@@ -2282,7 +2321,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             {
                 while (b)
                 {
-                    if (b & 1)
+                    if (b & char(1))
                         ++count;
 
                     b >>= 1;
@@ -2327,7 +2366,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             else if (!bits_.size())
                 return true;
 
-            return !(bits_.back() & 1);
+            return !(bits_.back() & char(1));
         }
 
         __device__ __host__ CONSTEXPR bool isOdd() const noexcept
@@ -2335,7 +2374,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             if (!bits_.size())
                 return false;
 
-            return bits_.back() & 1;
+            return bits_.back() & char(1);
         }
 
         template <typename S>
@@ -2363,9 +2402,9 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return *this;
             else if (isInfinity() || *this < 2)
                 return nan();
-            else if (*this == 2)
+            else if (*this == char(2))
                 return Integer(2);
-            else if (*this == 3)
+            else if (*this == char(3))
                 return Integer(2);
             else if (this->template fits<unsigned int>())
             {
@@ -2434,7 +2473,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 return *this;
             else if (*this < 2)
                 return Integer(2);
-            else if (*this == 2)
+            else if (*this == char(2))
                 return Integer(3);
             else if (isInfinity())
                 return nan();
@@ -3057,7 +3096,7 @@ CONSTEXPR inline Integer<T> pow(Integer<T> base, Integer<T> exp)
     {
         auto n(pow(base.abs(), exp));
 
-        if (exp & 1)
+        if (exp & char(1))
             n = -n;
 
         return n;
@@ -3069,7 +3108,7 @@ CONSTEXPR inline Integer<T> pow(Integer<T> base, Integer<T> exp)
 
     for (;;)
     {
-        if (exp & 1)
+        if (exp & char(1))
             result *= base;
 
         exp >>= 1;
@@ -3111,7 +3150,7 @@ CONSTEXPR inline Integer<T> powm(Integer<T> base,
 
     while (exp > 0)
     {
-        if ((exp & 1) == 1)
+        if ((exp & char(1)) == 1)
         {
             result *= base_mod;
             result %= mod;
@@ -3427,7 +3466,7 @@ CONSTEXPR inline int legendre(Integer<T> const& a, Integer<T> const& p)
     {
         bool isResidue{false};
 
-        if (p == 2)
+        if (p == char(2))
             isResidue = true;
         else
             isResidue = (powm(a, (p - 1) / 2, p) == 1);
@@ -3861,7 +3900,7 @@ _div2n1n(Integer<T> a, Integer<T> b,
         return {Integer<T>(a.template cast<longest_type>() / b.template cast<longest_type>()),
                 Integer<T>(a.template cast<longest_type>() % b.template cast<longest_type>())};
 
-    auto pad(n & 1);
+    auto pad(n & char(1));
 
     if (pad)
     {
