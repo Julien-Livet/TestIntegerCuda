@@ -259,11 +259,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         {   
         }
         
-        __device__ __host__ CONSTEXPR Integer(Integer&& other) : isPositive_(std::move(other.isPositive_)),
-                                                                 bits_(std::move(other.bits_)),
-                                                                 isNan_(std::move(other.isNan_)),
-                                                                 isInfinity_(std::move(other.isInfinity_)),
-                                                                 autoAdjust_(std::move(other.autoAdjust_))
+        __device__ __host__ CONSTEXPR Integer(Integer&& other) : isPositive_(cu::move(other.isPositive_)),
+                                                                 bits_(cu::move(other.bits_)),
+                                                                 isNan_(cu::move(other.isNan_)),
+                                                                 isInfinity_(cu::move(other.isInfinity_)),
+                                                                 autoAdjust_(cu::move(other.autoAdjust_))
         {   
         }
 
@@ -1191,7 +1191,21 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             if constexpr (sizeof(S) <= sizeof(T))
             {
                 if (bits_.size() == 1)
-                    return bits_.back() == static_cast<T>(other);
+                {
+                    if constexpr (std::is_signed<S>::value)
+                    {
+                        if ((isPositive_ && other < 0)
+                            || (!isPositive_ && other >= 0))
+                            return false;
+
+                        if (other < 0)
+                            return bits_.back() == static_cast<T>(-other);
+                        else
+                            return bits_.back() == static_cast<T>(other);
+                    }
+                    else
+                        return bits_.back() == static_cast<T>(other);
+                }
             }
                             
             return *this == Integer(other);
@@ -1378,7 +1392,9 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         template <typename S>
         __device__ __host__ CONSTEXPR Integer& operator&=(S const& other)
         {
-            if constexpr (sizeof(S) <= sizeof(T))
+            if (isNan() || isInfinity())
+                return *this;
+            else if constexpr (sizeof(S) <= sizeof(T))
             {
                 if (bits_.empty())
                     return *this;
@@ -1396,7 +1412,9 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         template <typename S>
         __device__ __host__ CONSTEXPR Integer& operator^=(S const& other)
         {
-            if constexpr (sizeof(S) <= sizeof(T))
+            if (isNan() || isInfinity())
+                return *this;
+            else if constexpr (sizeof(S) <= sizeof(T))
             {
                 if (bits_.empty())
                 {
@@ -1455,6 +1473,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             {
                 bits_.resize(1);
                 bits_.back() = other;
+                isInfinity_ = false;
+                isNan_ = false;
+                
+                if constexpr (std::is_signed<S>::value)
+                    isPositive_ = (other >= 0);
                 
                 return *this;
             }
@@ -1464,11 +1487,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
 
         __device__ __host__ CONSTEXPR Integer& operator=(Integer&& other)
         {
-            isPositive_ = std::move(other.isPositive_);
-            bits_ = std::move(other.bits_);
-            isNan_ = std::move(other.isNan_);
-            isInfinity_ = std::move(other.isInfinity_);
-            autoAdjust_ = std::move(other.autoAdjust_);
+            isPositive_ = cu::move(other.isPositive_);
+            bits_ = cu::move(other.bits_);
+            isNan_ = cu::move(other.isNan_);
+            isInfinity_ = cu::move(other.isInfinity_);
+            autoAdjust_ = cu::move(other.autoAdjust_);
             
             return *this;
         }
