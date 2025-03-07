@@ -482,6 +482,10 @@ namespace cu
                 data_ = cu::move(other.data_);
                 size_ = cu::move(other.size_);
                 capacity_ = cu::move(capacity_);
+                
+                other.data_ = nullptr;
+                other.size_ = 0;
+                other.capacity_ = 0;
             }
 
             __device__ __host__ ~vector()
