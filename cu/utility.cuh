@@ -3,6 +3,12 @@
 
 namespace cu
 {
+    template< class T >
+    __device__ __host__ constexpr std::remove_reference_t<T>&& move(T&& t) noexcept
+    {
+        return static_cast<typename std::remove_reference<T>::type&&>(t) ;
+    }
+
     template <typename T>
     struct less
     {

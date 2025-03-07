@@ -477,6 +477,13 @@ namespace cu
             {
             }
 
+            __device__ __host__ vector(vector&& other)
+            {
+                data_ = cu::move(other.data_);
+                size_ = cu::move(other.size_);
+                capacity_ = cu::move(capacity_);
+            }
+
             __device__ __host__ ~vector()
             {
 #ifdef __CUDA_ARCH__
@@ -497,6 +504,22 @@ namespace cu
                 for (size_t i{0}; i < other.size(); ++i)
                     this->operator[](i) = other[i];
 
+                return *this;
+            }
+
+            __device__ __host__ vector& operator=(vector&& other)
+            {
+                
+#ifdef __CUDA_ARCH__
+                gpuErrchk(cudaFree(data_));
+#else
+                delete[] data_;
+#endif
+
+                data_ = cu::move(other.data_);
+                size_ = cu::move(other.size_);
+                capacity_ = cu::move(capacity_);
+                
                 return *this;
             }
 
@@ -600,7 +623,17 @@ namespace cu
                 return this->operator[](0);
             }
 
+            __device__ __host__ T& front()
+            {
+                return this->operator[](0);
+            }
+
             __device__ __host__ T const& back() const
+            {
+                return this->operator[](size_ - 1);
+            }
+
+            __device__ __host__ T& back()
             {
                 return this->operator[](size_ - 1);
             }
