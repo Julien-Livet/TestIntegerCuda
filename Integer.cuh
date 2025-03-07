@@ -1183,8 +1183,11 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         __device__ __host__ CONSTEXPR bool operator==(S const& other) const
         {
             if (bits_.empty())
-                return !other;
-                
+            {
+                if constexpr (!std::is_pointer_v<S> && !std::is_array_v<S>)
+                    return !other;
+            }
+
             if constexpr (sizeof(S) <= sizeof(T))
             {
                 if (bits_.size() == 1)
