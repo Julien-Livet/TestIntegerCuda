@@ -258,6 +258,14 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                                                                       autoAdjust_(other.autoAdjust_)
         {   
         }
+        
+        __device__ __host__ CONSTEXPR Integer(Integer&& other) : isPositive_(std::move(other.isPositive_)),
+                                                                 bits_(std::move(other.bits_)),
+                                                                 isNan_(std::move(other.isNan_)),
+                                                                 isInfinity_(std::move(other.isInfinity_)),
+                                                                 autoAdjust_(std::move(other.autoAdjust_))
+        {   
+        }
 
         template <typename S, std::enable_if_t<std::is_standard_layout_v<S> && std::is_trivial_v<S> >* = nullptr>
         __device__ __host__ CONSTEXPR Integer(S n)
@@ -587,10 +595,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                         auto const ab(a * b);
 
                         if (ab / b == a)
-                        {
-                            bits_.resize(1);
-                            bits_.back() = ab;
-                        }
+                            *this = ab;
                         else
                         {
                             auto number{[] (longest_type n) -> size_t
@@ -868,10 +873,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                 else if (isPositive_ && other.isPositive_)
                 {
                     if (this->template fits<longest_type>() && other.template fits<longest_type>())
-                    {
-                        bits_.resize(1);
-                        bits_.back() = this->template cast<longest_type>() / other.template cast<longest_type>();
-                    }
+                        *this = this->template cast<longest_type>() / other.template cast<longest_type>();
                     else if (!(rhs & char(1)))
                     {
                         auto r(rhs);
@@ -921,27 +923,26 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
                     {
                         auto const isPositive{isPositive_};
 
-                        bits_.resize(1);
-                        bits_.back() = abs().template cast<longest_type>() % other.abs().template cast<longest_type>();
+                        *this = abs().template cast<longest_type>() % other.abs().template cast<longest_type>();
 
                         isPositive_ = isPositive;
                     }
                     else
                     {
-                        auto const qr(computeQrBurnikelZiegler(*this, other));
+                        auto qr(computeQrBurnikelZiegler(*this, other));
 
                         assert(*this == qr.first * rhs + qr.second);
 
-                        *this = qr.second;
+                        *this = cu::move(qr.second);
                     }
                 }
                 else
                 {
-                    auto const qr(computeQrBurnikelZiegler(*this, other));
+                    auto qr(computeQrBurnikelZiegler(*this, other));
                     
                     assert(*this == qr.first * rhs + qr.second);
 
-                    *this = qr.second;
+                    *this = cu::move(qr.second);
                 }
             }
 
@@ -1187,7 +1188,7 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
             if constexpr (sizeof(S) <= sizeof(T))
             {
                 if (bits_.size() == 1)
-                    return bits_.back() == other;
+                    return bits_.back() == static_cast<T>(other);
             }
                             
             return *this == Integer(other);
@@ -1352,8 +1353,20 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         {
             if constexpr (sizeof(S) <= sizeof(T))
             {
-                if (bits_.size() == 1)
+                if (bits_.empty())
+                {
+                    bits_.resize(1);
+                    bits_.back() = 0;
                     bits_.back() |= other;
+                    
+                    return *this;
+                }
+                else if (bits_.size() == 1)
+                {
+                    bits_.back() |= other;
+                    
+                    return *this;
+                }
             }
 
             return *this |= Integer(other);
@@ -1364,8 +1377,14 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         {
             if constexpr (sizeof(S) <= sizeof(T))
             {
-                if (bits_.size() == 1)
+                if (bits_.empty())
+                    return *this;
+                else if (bits_.size() == 1)
+                {
                     bits_.back() &= other;
+                    
+                    return *this;
+                }
             }
 
             return *this &= Integer(other);
@@ -1376,8 +1395,20 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         {
             if constexpr (sizeof(S) <= sizeof(T))
             {
-                if (bits_.size() == 1)
+                if (bits_.empty())
+                {
+                    bits_.resize(1);
+                    bits_.back() = 0;
                     bits_.back() ^= other;
+                    
+                    return *this;
+                }
+                else if (bits_.size() == 1)
+                {
+                    bits_.back() ^= other;
+                    
+                    return *this;
+                }
             }
 
             return *this ^= Integer(other);
@@ -1417,7 +1448,26 @@ class Integer<T, typename std::enable_if<std::is_unsigned<T>::value && std::is_s
         template <typename S>
         __device__ __host__ CONSTEXPR Integer& operator=(S const& other)
         {
+            if constexpr (sizeof(S) <= sizeof(T))
+            {
+                bits_.resize(1);
+                bits_.back() = other;
+                
+                return *this;
+            }
+            
             return *this = Integer(other);
+        }
+
+        __device__ __host__ CONSTEXPR Integer& operator=(Integer&& other)
+        {
+            isPositive_ = std::move(other.isPositive_);
+            bits_ = std::move(other.bits_);
+            isNan_ = std::move(other.isNan_);
+            isInfinity_ = std::move(other.isInfinity_);
+            autoAdjust_ = std::move(other.autoAdjust_);
+            
+            return *this;
         }
 
         __host__ std::string toString(size_t base = 10, bool showBase = true) const
