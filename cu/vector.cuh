@@ -486,11 +486,14 @@ namespace cu
 
             __device__ __host__ ~vector()
             {
+                if (data_)
+                {
 #ifdef __CUDA_ARCH__
-                gpuErrchk(cudaFree(data_));
+                    gpuErrchk(cudaFree(data_));
 #else
-                delete[] data_;
+                    delete[] data_;
 #endif
+                }
 
                 data_ = nullptr;
                 size_ = 0;
@@ -516,9 +519,13 @@ namespace cu
                 delete[] data_;
 #endif
 
-                data_ = cu::move(other.data_);
+                data_ = other.data_;
                 size_ = cu::move(other.size_);
                 capacity_ = cu::move(capacity_);
+                
+                other.data_ = nullptr;
+                other.size_ = 0;
+                other.capacity_ = 0;
                 
                 return *this;
             }
