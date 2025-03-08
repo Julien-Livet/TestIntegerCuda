@@ -6,7 +6,9 @@
 
 #include <cuda.h>
 
+#include "algorithm.cuh"
 #include "iterator.cuh"
+#include "utility.cuh"
 
 __device__ __host__ inline void gpuAssert(cudaError_t code, const char *file,
                                           int line, bool abort = false)

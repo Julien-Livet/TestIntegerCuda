@@ -13,7 +13,7 @@ namespace cu
     __device__ __host__ BidirIt2 move_backward(BidirIt1 first, BidirIt1 last, BidirIt2 d_last)
     {
         while (first != last)
-            *(--d_last) = std::move(*(--last));
+            *(--d_last) = cu::move(*(--last));
 
         return d_last;
     }
@@ -106,7 +106,7 @@ namespace cu
     __device__ __host__
     ForwardIt upper_bound(ForwardIt first, ForwardIt last, const T& value)
     {
-        return std::upper_bound(first, last, value, cu::less<T>());
+        return cu::upper_bound(first, last, value, cu::less<T>());
     }
 
     template<class ForwardIt,
